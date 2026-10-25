@@ -1,6 +1,6 @@
 {
   "name": "papotato",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,7 +15,9 @@
     "setup:media": "node scripts/setup-media.mjs",
     "media": "node scripts/run-media.mjs",
     "test:media": "node --env-file-if-exists=.env scripts/test-media.mjs",
-    "backup": "node --env-file-if-exists=.env scripts/backup.mjs"
+    "backup": "node --env-file-if-exists=.env scripts/backup.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
+    "check:pages": "node scripts/check-pages.mjs"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.0",

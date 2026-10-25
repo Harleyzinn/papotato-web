@@ -3,7 +3,9 @@ import express from 'express';
 import { resolve } from 'node:path';
 import { createApp } from './app.js';
 const { app, attach, db } = createApp();
-if (process.env.NODE_ENV === 'production') {
+if (process.env.API_ONLY === 'true') {
+  // Dedicated API service for a frontend hosted on GitHub Pages.
+} else if (process.env.NODE_ENV === 'production') {
   app.use(express.static(resolve('dist')));
   app.get('/{*path}', (_req, res) => res.sendFile(resolve('dist/index.html')));
 } else {

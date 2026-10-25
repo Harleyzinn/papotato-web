@@ -1,8 +1,10 @@
 # Papotato
 
-**Papotato = papo + potato.** Comunicação entre amigos, em português: texto persistente, comunidades e chamadas com uma SFU LiveKit real. Identidade própria em verde menta, símbolo de batata em forma de conversa e temas Jardim à noite, Luz da manhã e Ameixa. Sem contas ou conversas pré-carregadas.
+**Papotato = papo + potato.** Comunicação entre amigos, em português: texto persistente, comunidades e chamadas com uma SFU LiveKit real. Identidade própria em dourado batata e ardósia, símbolo de batata em forma de conversa e três temas. Sem contas ou conversas pré-carregadas.
 
-**Estado:** implementação funcional local com testes de API e transporte de mídia. Não publicada em um domínio. Não foi validada entre redes diferentes. O escopo completo solicitado ainda tem pendências, listadas em [docs/STATUS.md](docs/STATUS.md).
+**Versão 0.2:** frontend preparado para [GitHub Pages](https://harleyzinn.github.io/papotato-web/), com build em subdiretório, deploy automático e API em domínio separado. **API e SFU públicas ainda precisam ser provisionadas**: sem elas, a publicação exibe uma tela explícita de configuração pendente e não permite simular conversas. Veja [como concluir a configuração](docs/GITHUB_PAGES.md) e os [limites e testes](docs/STATUS.md). Não houve validação entre redes diferentes.
+
+O tema padrão agora combina tons de ardósia e batata dourada, com animações discretas e redução de movimento. Os controles de mídia carregam sob demanda. Conversas e chamadas reais continuam na API/LiveKit; o Pages não os hospeda.
 
 ## Início rápido no Windows x64
 
@@ -50,6 +52,8 @@ O perfil Compose usa HTTP local e cookies sem `Secure` deliberadamente; só exp�
 
 ## Comandos
 
+Para o frontend publicado, use `npm run build:pages` e `npm run check:pages`. As instruções completas estão em [docs/GITHUB_PAGES.md](docs/GITHUB_PAGES.md); mudanças e validações da versão atual estão em [docs/RELEASE-0.2.md](docs/RELEASE-0.2.md).
+
 | Comando                                    | Finalidade                                                 |
 | ------------------------------------------ | ---------------------------------------------------------- |
 | `npm run dev`                              | API + Socket.IO + Vite em uma origem                       |
@@ -64,7 +68,7 @@ Migrações SQL idempotentes em `server/migration.sql`, executadas automaticamen
 ## Arquitetura
 
 - React 19 + Vite, CSS responsivo, Markdown sem HTML bruto. Lucide para ícones; logo em SVG próprio.
-- Express 5 e Socket.IO em uma origem. REST persiste e autoriza as operações; sockets entregam mudanças e presença efêmera. Reconectar recarrega o histórico. UUID estável e unicidade no banco tornam reenvio idempotente.
+- Express 5 e Socket.IO em origem própria, com CORS restrito ao frontend. Sessão bearer por aba para Pages; cookies HttpOnly continuam suportados para clientes do servidor. REST persiste e autoriza as operações; sockets entregam mudanças e presença efêmera. Reconectar recarrega o histórico. UUID estável e unicidade no banco tornam reenvio idempotente.
 - SQLite real, WAL, chaves estrangeiras e transações. Anexos armazenados como BLOB no próprio banco: backup inclui os arquivos.
 - Senhas com scrypt/salt aleatório; sessões de 7 dias com tokens aleatórios, somente hash no banco e cookies HttpOnly/SameSite=Lax. Cookies Secure em produção; revogação invalida REST e sockets.
 - LiveKit distribui voz, câmera e tela. Tokens de 5 minutos vinculados ao usuário e canal autorizado. A SFU faz o fan-out; o cliente não mantém uma conexão P2P independente para cada amigo.

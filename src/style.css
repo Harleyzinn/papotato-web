@@ -2,17 +2,17 @@
 :root {
   font-family: 'DM Sans', sans-serif;
   color-scheme: dark;
-  --bg: #141a17;
-  --panel: #19201c;
-  --rail: #0f1512;
-  --raised: #202a24;
-  --line: #2b352e;
-  --text: #e8ede9;
-  --muted: #929f96;
-  --accent: #a4f4c5;
-  --ink: #163025;
-  --hover: #26332b;
-  --selected: #2b3f32;
+  --bg: #111318;
+  --panel: #191c22;
+  --rail: #0c0e12;
+  --raised: #22262e;
+  --line: #30343d;
+  --text: #f4f2ed;
+  --muted: #a1a7b2;
+  --accent: #f0c888;
+  --ink: #322414;
+  --hover: #2b3039;
+  --selected: #3b3328;
   --danger: #ffb4ad;
   background: var(--bg);
   color: var(--text);
@@ -237,7 +237,7 @@ hr {
   grid-template-columns: 1.15fr 1fr;
 }
 .auth-story {
-  background: #1d2d24;
+  background: #1b2028;
   padding: 45px 60px;
   display: flex;
   flex-direction: column;
@@ -273,7 +273,7 @@ hr {
   padding-top: 70px;
 }
 .story-content .eyebrow {
-  color: #acd7b8;
+  color: #f0c888;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -303,7 +303,7 @@ hr {
 }
 .orbit-circle {
   position: absolute;
-  border: 1px solid #3d5142;
+  border: 1px solid #4a4540;
   border-radius: 50%;
   width: 180px;
   height: 180px;
@@ -325,8 +325,8 @@ hr {
 }
 .orbit-note {
   position: absolute;
-  border: 1px solid #4b6051;
-  background: #293d30;
+  border: 1px solid #555047;
+  background: #2c3037;
   box-shadow: 0 12px 40px #0002;
   padding: 14px 18px;
   display: flex;
@@ -1867,5 +1867,169 @@ dialog .secondary {
   }
   .extras-toggle {
     left: 13px;
+  }
+}
+
+.service-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: radial-gradient(ellipse at 50% 10%, #62492335, transparent 65%), var(--bg);
+}
+.service-card {
+  max-width: 580px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 44px;
+  background: var(--panel);
+  box-shadow: 0 25px 100px #0003;
+}
+.service-card > img {
+  width: 64px;
+  display: block;
+  margin-bottom: 26px;
+}
+.service-card > .eyebrow {
+  color: var(--accent);
+}
+.service-card h1 {
+  font-size: 2.2rem;
+  line-height: 1.2;
+  font-weight: 650;
+}
+.service-card p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.service-checks {
+  display: grid;
+  gap: 14px;
+  border-block: 1px solid var(--line);
+  padding: 22px 0;
+  margin: 25px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.service-checks span {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.service-checks svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.service-card .primary {
+  text-decoration: none;
+  width: 100%;
+  text-align: center;
+}
+.service-card > small {
+  display: block;
+  margin-top: 18px;
+  line-height: 1.6;
+}
+.service-card > button {
+  margin-top: 25px;
+}
+.service-card .primary:disabled svg {
+  animation: spin 1s linear infinite;
+}
+.brand {
+  letter-spacing: -0.065em;
+}
+.home-logo img,
+.space-icon.active {
+  box-shadow: 0 4px 20px #0002;
+}
+.auth-story {
+  background-image: radial-gradient(ellipse at 100% 0, #a7772730, transparent 65%);
+}
+.message-tools {
+  box-shadow: 0 6px 20px #0002;
+}
+.composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.channel-welcome {
+  background: radial-gradient(ellipse at 0 0, #e6b85e09, transparent 65%);
+}
+.badge {
+  font-variant-numeric: tabular-nums;
+}
+.search:focus-within {
+  border-color: var(--accent);
+}
+.member:hover {
+  background: var(--hover);
+  border-radius: 9px;
+}
+.loading {
+  background: radial-gradient(ellipse at center, #6b532122, transparent 60%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    transition:
+      background 0.16s,
+      border-color 0.16s,
+      box-shadow 0.16s,
+      color 0.16s,
+      opacity 0.16s;
+  }
+  dialog[open],
+  .service-card {
+    animation: arrive 0.22s ease-out;
+  }
+  .primary:hover:not(:disabled) {
+    box-shadow: 0 5px 24px #e5b75b22;
+  }
+  .orbit > img {
+    animation: breathe 7s ease-in-out infinite;
+  }
+  .channel:active,
+  .space-icon:active {
+    transform: scale(0.98);
+  }
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes breathe {
+  50% {
+    transform: rotate(3deg) translateY(-5px);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 600px) {
+  .service-page {
+    padding: 18px;
+  }
+  .service-card {
+    padding: 28px 24px;
+    border-radius: 18px;
+  }
+  .service-card h1 {
+    font-size: 1.75rem;
+  }
+  .brand span {
+    display: none;
   }
 }

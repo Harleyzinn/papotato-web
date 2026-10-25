@@ -1,15 +1,8 @@
+import { api, apiFetch } from './client.js';
+import { AttachmentLink, AttachmentImage } from './PrivateFile.jsx';
+export { AttachmentLink, AttachmentImage };
 import React, { useState, useEffect, useRef } from 'react';
 import { Paperclip, Shield, X, MessagesSquare } from 'lucide-react';
-async function api(path, method = 'GET', body) {
-  const r = await fetch('/api' + path, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error);
-  return data;
-}
 export function UploadButton({ channel, onUploaded, onError }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -20,16 +13,17 @@ export function UploadButton({ channel, onUploaded, onError }) {
         type="file"
         disabled={busy}
         onChange={async (e) => {
-          const file = e.target.files?.[0];
+          const input = e.currentTarget;
+          const file = input.files?.[0];
           if (!file) return;
           if (file.size > 8 * 1024 * 1024) {
             onError(new Error('O limite por arquivo é 8 MiB.'));
-            e.target.value = '';
+            input.value = '';
             return;
           }
           setBusy(true);
           try {
-            const r = await fetch('/api/channels/' + channel + '/files', {
+            const r = await apiFetch('/channels/' + channel + '/files', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
@@ -47,7 +41,7 @@ export function UploadButton({ channel, onUploaded, onError }) {
             onError(e);
           } finally {
             setBusy(false);
-            e.target.value = '';
+            input.value = '';
           }
         }}
       />
@@ -104,34 +98,6 @@ export function GroupCreator({ friends, user, onOpen, onError }) {
         <button className="secondary">Abrir conversa privada</button>
       </form>
     </details>
-  );
-}
-export function AttachmentLink({ href, children, ...props }) {
-  if (href?.startsWith('/api/files/')) {
-    const name = String(children);
-    if (/\.(mp3|ogg)$/i.test(name))
-      return (
-        <span className="attachment">
-          <audio controls src={href} />
-          <a href={href} download>
-            {children}
-          </a>
-        </span>
-      );
-    if (/\.mp4$/i.test(name))
-      return (
-        <span className="attachment">
-          <video controls src={href} />
-          <a href={href} download>
-            {children}
-          </a>
-        </span>
-      );
-  }
-  return (
-    <a href={href} {...props} target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
   );
 }
 export default function Extras({ space, user, members, canManage, onError, onChanged }) {

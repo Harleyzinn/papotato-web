@@ -1,16 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { api, API_BASE, APP_BASE, asset, clearToken, getToken } from './client.js';
+import ServiceGate from './ServiceGate.jsx';
+const MediaUI = lazy(() => import('./MediaUI.jsx'));
 import { createRoot } from 'react-dom/client';
 import { io } from 'socket.io-client';
 import Markdown from 'react-markdown';
-import {
-  LiveKitRoom,
-  PreJoin,
-  useConnectionState,
-  useRoomContext,
-} from '@livekit/components-react';
-import VideoConference from './CallView.jsx';
-import Extras, { UploadButton, DirectButton, AttachmentLink, GroupCreator } from './Extras.jsx';
-import { VideoPresets } from 'livekit-client';
+import Extras, {
+  UploadButton,
+  DirectButton,
+  AttachmentLink,
+  GroupCreator,
+  AttachmentImage,
+} from './Extras.jsx';
 import {
   Plus,
   Hash,
@@ -38,19 +39,8 @@ import {
   Link,
   Sparkles,
 } from 'lucide-react';
-import '@livekit/components-styles';
 import './style.css';
 
-async function api(path, method = 'GET', body) {
-  const response = await fetch('/api' + path, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Serviço indisponível.');
-  return data;
-}
 const IconButton = ({ label, children, ...props }) => (
   <button className="icon" aria-label={label} title={label} {...props}>
     {children}
@@ -110,17 +100,18 @@ function Auth({ onLogin }) {
   return (
     <main className="auth-page">
       <div className="auth-story">
-        <a className="brand" href="/">
-          <img src="/logo.svg" alt="" />
+        <a className="brand" href={APP_BASE}>
+          <img src={asset('logo.svg')} alt="" />
           papotato<span>JUNTO É MELHOR</span>
         </a>
         <div className="story-content">
           <span className="eyebrow">
-            <span className="status-dot" /> UM LUGAR PARA OS SEUS
+            <span className="status-dot" /> PAPO BOM, COMPANHIA MELHOR
           </span>
           <h1>
-            A distância muda.
-            <br />A conexão fica.
+            O papo tá servido.
+            <br />
+            Pode chegar junto.
           </h1>
           <p>
             Uma conversa que vira madrugada.
@@ -133,7 +124,7 @@ function Auth({ onLogin }) {
             <div className="orbit-circle c1" />
             <div className="orbit-circle c2" />
             <div className="orbit-circle c3" />
-            <img src="/logo.svg" alt="Símbolo Papotato" />
+            <img src={asset('logo.svg')} alt="Símbolo Papotato" />
             <span className="orbit-note n1">
               <Headphones size={19} /> Só mais uma partida?
             </span>
@@ -230,33 +221,6 @@ function Auth({ onLogin }) {
     </main>
   );
 }
-function CallStatus() {
-  const state = useConnectionState();
-  const room = useRoomContext();
-  const [deaf, setDeaf] = useState(false);
-  useEffect(() => {
-    for (const p of room.remoteParticipants.values()) p.setVolume(deaf ? 0 : 1);
-    const apply = (p) => p.setVolume(deaf ? 0 : 1);
-    room.on('participantConnected', apply);
-    return () => room.off('participantConnected', apply);
-  }, [deaf, room]);
-  return (
-    <div className="call-status">
-      <span className="status-dot" />
-      {{
-        connected: 'Conectado',
-        connecting: 'Conectando…',
-        reconnecting: 'Reconectando…',
-        disconnected: 'Desconectado',
-        signalReconnecting: 'Reconectando sinal…',
-      }[state] || state}
-      <button onClick={() => setDeaf(!deaf)}>
-        <Headphones size={15} />
-        {deaf ? 'Ouvir chamada' : 'Silenciar reprodução'}
-      </button>
-    </div>
-  );
-}
 function App() {
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
@@ -311,7 +275,7 @@ function App() {
   async function refreshSpaces(preferred) {
     const s = await api('/spaces');
     setSpaces(s);
-    setSpace((old) => preferred || old || s[0]?.id || null);
+    setSpace((old) => preferred || (s.some((x) => x.id === old) ? old : s[0]?.id || null));
   }
   async function refreshMessages(cid = channelRef.current, q = '') {
     if (!cid) return;
@@ -347,12 +311,17 @@ function App() {
       const code = new URLSearchParams(location.search).get('invite');
       if (code) {
         const joined = await api('/invites/' + encodeURIComponent(code) + '/join', 'POST');
-        history.replaceState(null, '', '/');
+        history.replaceState(null, '', APP_BASE);
         await refreshSpaces(joined.id);
         setNotice('Você entrou na comunidade!');
       } else await refreshSpaces();
     });
-    const s = io();
+    const s = io(API_BASE || undefined, {
+      auth: (callback) => callback({ token: getToken() }),
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    });
     socket.current = s;
     s.on('connect', () => {
       setConnected(true);
@@ -362,7 +331,21 @@ function App() {
       }
     });
     s.on('disconnect', () => setConnected(false));
-    s.on('connect_error', () => setConnected(false));
+    s.on('connect_error', (e) => {
+      setConnected(false);
+      if (e.message === 'Sessão inválida.') {
+        clearToken();
+        setCall(null);
+        setUser(null);
+      }
+    });
+    s.on('session-revoked', () => {
+      clearToken();
+      setCall(null);
+      setUser(null);
+      setSpace(null);
+      setChannel(null);
+    });
     s.on('message', (m) => {
       if (channelRef.current === m.channel_id) {
         setMessages((old) => (old.some((x) => x.id === m.id) ? old : [...old, m]));
@@ -395,6 +378,9 @@ function App() {
   useEffect(() => {
     if (!space || !user) return;
     let active = true;
+    setChannel(null);
+    setChannels([]);
+    setMembers([]);
     attempt(async () => {
       const [c, m] = await Promise.all([
         api('/spaces/' + space + '/channels'),
@@ -422,6 +408,9 @@ function App() {
     channelRef.current = channel;
     setMessages([]);
     setReply(null);
+    setBody(
+      channel ? sessionStorage.getItem('papotato-draft:' + user?.id + ':' + channel) || '' : '',
+    );
     setSearch('');
     setTyping('');
     if (channel) {
@@ -467,6 +456,7 @@ function App() {
       if (channelRef.current === cid) {
         setMessages((old) => (old.some((x) => x.id === m.id) ? old : [...old, m]));
         setBody('');
+        sessionStorage.removeItem('papotato-draft:' + user.id + ':' + cid);
         setReply(null);
         pendingDraft.current = null;
       }
@@ -503,6 +493,7 @@ function App() {
   async function logout() {
     await attempt(async () => {
       await api('/auth/logout', 'POST');
+      clearToken();
       setCall(null);
       setUser(null);
       setSpaces([]);
@@ -521,7 +512,7 @@ function App() {
   if (loading)
     return (
       <div className="loading">
-        <img src="/logo.svg" alt="" />
+        <img src={asset('logo.svg')} alt="" />
         Preparando o papo…
       </div>
     );
@@ -549,7 +540,7 @@ function App() {
             setModal('welcome');
           }}
         >
-          <img src="/logo.svg" alt="Papotato" />
+          <img src={asset('logo.svg')} alt="Papotato" />
         </button>
         <div className="rail-divider" />
         {spaces.map((s) => (
@@ -742,7 +733,7 @@ function App() {
         {!channel ? (
           <section className="empty-home">
             <div className="welcome-art">
-              <img src="/logo.svg" alt="" />
+              <img src={asset('logo.svg')} alt="" />
               <span>✦</span>
             </div>
             <span className="eyebrow">ESPAÇO PARA SER VOCÊ</span>
@@ -853,7 +844,9 @@ function App() {
                       </div>
                     )}
                     <div className="markdown">
-                      <Markdown components={{ a: AttachmentLink }}>{m.body}</Markdown>
+                      <Markdown components={{ a: AttachmentLink, img: AttachmentImage }}>
+                        {m.body}
+                      </Markdown>
                     </div>
                     {m.reactions?.length > 0 && (
                       <div className="reactions">
@@ -953,6 +946,10 @@ function App() {
                   value={body}
                   onChange={(e) => {
                     setBody(e.target.value);
+                    sessionStorage.setItem(
+                      'papotato-draft:' + user.id + ':' + channel,
+                      e.target.value,
+                    );
                     socket.current?.emit('typing', channel);
                   }}
                   onKeyDown={(e) => {
@@ -986,7 +983,7 @@ function App() {
       </main>
       <aside className="members-panel">
         <div className="members-title">
-          <span>GENTE DA RODA</span>
+          <span>SUA TURMA</span>
           <span>{members.length}</span>
         </div>
         <span className="eyebrow">POR AQUI</span>
@@ -1041,7 +1038,7 @@ function App() {
                   channel: 'Novo canal',
                   settings: 'Do seu jeito',
                   friends: 'Seus amigos',
-                  members: 'Gente da roda',
+                  members: 'Sua turma',
                   welcome: 'Bem-vindo ao Papotato',
                 }[modal]
           }
@@ -1314,6 +1311,7 @@ function App() {
                 onClick={() =>
                   attempt(async () => {
                     await api('/auth/revoke', 'POST');
+                    clearToken();
                     setCall(null);
                     setUser(null);
                   })
@@ -1570,83 +1568,30 @@ function App() {
           )}
         </Modal>
       )}
-      {prejoin && (
-        <Modal title={'Entrar em ' + prejoin.name} onClose={() => setPrejoin(null)}>
-          <p>
-            Teste seu microfone e câmera. Os dispositivos só serão acessados ao ativar os controles
-            abaixo.
-          </p>
-          <PreJoin
-            defaults={{ username: user.display, audioEnabled: false, videoEnabled: false }}
-            persistUserChoices={false}
-            onSubmit={startCall}
-            onError={(e) =>
-              report(new Error('Não foi possível acessar o dispositivo: ' + e.message))
-            }
-            joinLabel="Entrar na chamada"
-            micLabel="Microfone"
-            camLabel="Câmera"
-            userLabel="Seu nome"
-          />
-          <p className="muted">
-            Compartilhar áudio depende do navegador e da superfície escolhida. No Chrome/Edge, uma
-            aba costuma oferecer a opção “Compartilhar áudio”.
-          </p>
-        </Modal>
-      )}
-      {call && (
-        <section
-          className={'call-window ' + (callMin ? 'minimized' : '')}
-          aria-label="Chamada ativa"
-        >
-          <div className="call-window-header">
-            <div>
-              <span className="status-dot" />
-              <strong>{call.channel.name}</strong>
-              <small>Até 8 pessoas · transporte criptografado</small>
-            </div>
-            <button onClick={() => setCallMin(!callMin)}>
-              {callMin ? 'Ampliar chamada' : 'Minimizar'}
-            </button>
-            <IconButton label="Sair da chamada" onClick={() => setCall(null)}>
-              <X size={19} />
-            </IconButton>
-          </div>
-          <LiveKitRoom
-            token={call.token}
-            serverUrl={call.url}
-            connect
-            audio={call.choices.audioEnabled ? { deviceId: call.choices.audioDeviceId } : false}
-            video={call.choices.videoEnabled ? { deviceId: call.choices.videoDeviceId } : false}
-            options={{
-              adaptiveStream: true,
-              dynacast: true,
-              videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
-              publishDefaults: {
-                simulcast: true,
-                videoEncoding: { maxBitrate: 1500000, maxFramerate: 30 },
-                screenShareEncoding: { maxBitrate: 2500000, maxFramerate: 15 },
-              },
+      {(prejoin || call) && (
+        <Suspense fallback={<div className="banner notice">Carregando controles de chamada…</div>}>
+          <MediaUI
+            {...{
+              prejoin,
+              setPrejoin,
+              user,
+              startCall,
+              report,
+              call,
+              callMin,
+              setCallMin,
+              setCall,
+              Modal,
+              IconButton,
             }}
-            onDisconnected={() => setCall(null)}
-            onError={(e) => report(new Error('Falha na chamada: ' + e.message))}
-            onMediaDeviceFailure={(failure) =>
-              report(
-                new Error(
-                  'Dispositivo indisponível: ' +
-                    failure +
-                    '. Verifique permissões e se outro programa está usando a câmera ou o microfone.',
-                ),
-              )
-            }
-            data-lk-theme="default"
-          >
-            <CallStatus />
-            <VideoConference />
-          </LiveKitRoom>
-        </section>
+          />
+        </Suspense>
       )}
     </div>
   );
 }
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(
+  <ServiceGate>
+    <App />
+  </ServiceGate>,
+);

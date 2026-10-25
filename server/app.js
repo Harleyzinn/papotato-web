@@ -22,6 +22,8 @@ export function createApp({
   directory = process.env.DATA_DIR || './data',
   origin = process.env.APP_ORIGIN || 'http://localhost:3000',
 } = {}) {
+  const allowedOrigin = new URL(origin).origin;
+  const publicUrl = (process.env.APP_PUBLIC_URL || origin).replace(/\/$/, '') + '/';
   const db = openDatabase(directory);
   const app = express();
   let io;
@@ -55,6 +57,22 @@ export function createApp({
           : false,
     }),
   );
+  app.use('/api', (req, res, next) => {
+    const requestOrigin = req.headers.origin;
+    if (requestOrigin && requestOrigin !== allowedOrigin)
+      return res.status(403).json({ error: 'Origem não autorizada.' });
+    if (requestOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Authorization, Content-Type, X-File-Name, X-Papotato-Auth',
+      );
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
   app.use(express.json({ limit: '32kb' }));
   app.use(
     '/api',
@@ -64,13 +82,15 @@ export function createApp({
     if (
       !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
       req.headers.origin &&
-      req.headers.origin !== origin
+      req.headers.origin !== allowedOrigin
     )
       return res.status(403).json({ error: 'Origem não autorizada.' });
     next();
   });
-  const authenticate = (cookie) => {
-    const token = parse(cookie || '').roda;
+  const authenticate = (cookie, authorization) => {
+    const token = authorization?.startsWith('Bearer ')
+      ? authorization.slice(7)
+      : parse(cookie || '').roda;
     return (
       token &&
       get(
@@ -81,7 +101,7 @@ export function createApp({
     );
   };
   app.use('/api', (req, res, next) => {
-    req.user = authenticate(req.headers.cookie);
+    req.user = authenticate(req.headers.cookie, req.headers.authorization);
     next();
   });
   const auth = (req, res, next) =>
@@ -95,19 +115,26 @@ export function createApp({
         next(e);
       }
     });
-  function session(res, userId) {
+  function session(res, userId, bearer = false) {
     const token = randomBytes(32).toString('hex');
     run('INSERT INTO sessions VALUES(?,?,?)', digest(token), userId, Date.now() + 7 * 86400000);
-    res.setHeader(
-      'Set-Cookie',
-      serialize('roda', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 604800,
-      }),
-    );
+    if (!bearer)
+      res.setHeader(
+        'Set-Cookie',
+        serialize('roda', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 604800,
+        }),
+      );
+    return token;
+  }
+  function loginResponse(req, res, user) {
+    const bearer = req.headers['x-papotato-auth'] === 'bearer';
+    const token = session(res, user.id, bearer);
+    return { ...publicUser(user), ...(bearer ? { sessionToken: token } : {}) };
   }
   function member(space, user) {
     return (
@@ -197,8 +224,14 @@ export function createApp({
     '/health',
     () => ({
       ok: true,
+      app: 'papotato',
+      version: '0.2.0',
       database: !!get('SELECT 1'),
-      mediaConfigured: !!process.env.LIVEKIT_URL,
+      mediaConfigured: !!(
+        process.env.LIVEKIT_URL &&
+        process.env.LIVEKIT_API_KEY &&
+        process.env.LIVEKIT_API_SECRET
+      ),
       emailConfigured: false,
     }),
     false,
@@ -230,8 +263,7 @@ export function createApp({
         b.display,
         Date.now(),
       );
-      session(res, uid);
-      return publicUser(get('SELECT * FROM users WHERE id=?', uid));
+      return loginResponse(req, res, get('SELECT * FROM users WHERE id=?', uid));
     },
     false,
   );
@@ -244,19 +276,20 @@ export function createApp({
       const [salt, hash] = (u?.password || 'dummy:' + '00'.repeat(64)).split(':');
       if (!timingSafeEqual(Buffer.from(hash, 'hex'), scryptSync(b.password, salt, 64)) || !u)
         fail(401, 'E-mail ou senha incorretos.');
-      session(res, u.id);
-      return publicUser(u);
+      return loginResponse(req, res, u);
     },
     false,
   );
   route('post', '/auth/logout', async (req, res) => {
     run('DELETE FROM sessions WHERE hash=?', req.user.session_hash);
+    io?.to('session:' + req.user.session_hash).emit('session-revoked');
     io?.in('session:' + req.user.session_hash).disconnectSockets();
     res.setHeader('Set-Cookie', serialize('roda', '', { path: '/', maxAge: 0 }));
     await disconnectMedia(req.user.id);
   });
   route('post', '/auth/revoke', async (req) => {
     run('DELETE FROM sessions WHERE user_id=?', req.user.id);
+    io?.to('user:' + req.user.id).emit('session-revoked');
     io?.in('user:' + req.user.id).disconnectSockets();
     await disconnectMedia(req.user.id);
   });
@@ -382,7 +415,7 @@ export function createApp({
       Date.now() + b.hours * 3600000,
       b.uses,
     );
-    return { code, url: origin + '/?invite=' + code };
+    return { code, url: publicUrl + '?invite=' + code };
   });
   route('get', '/spaces/:id/invites', (req) => {
     admin(req.params.id, req.user.id);
@@ -826,25 +859,32 @@ export function createApp({
     if (!req.path.startsWith('/api')) return next(err);
     const status = err instanceof z.ZodError ? 400 : err.status || 500;
     if (status === 500) console.error('request_failed', req.method, req.path, err.name);
-    res
-      .status(status)
-      .json({
-        error:
-          status === 500
-            ? 'Não foi possível concluir. Verifique o servidor.'
-            : err instanceof z.ZodError
-              ? 'Verifique os campos informados.'
-              : status === 413
-                ? 'O limite por arquivo é 8 MiB.'
-                : err.message,
-      });
+    res.status(status).json({
+      error:
+        status === 500
+          ? 'Não foi possível concluir. Verifique o servidor.'
+          : err instanceof z.ZodError
+            ? 'Verifique os campos informados.'
+            : status === 413
+              ? 'O limite por arquivo é 8 MiB.'
+              : err.message,
+    });
   });
   function attach(server) {
-    io = new Server(server, { cors: { origin, credentials: true }, maxHttpBufferSize: 8192 });
+    io = new Server(server, {
+      cors: { origin: allowedOrigin, credentials: false },
+      maxHttpBufferSize: 8192,
+    });
     io.use((socket, next) => {
-      if (socket.handshake.headers.origin && socket.handshake.headers.origin !== origin)
+      if (socket.handshake.headers.origin && socket.handshake.headers.origin !== allowedOrigin)
         return next(new Error('Origem inválida.'));
-      const u = authenticate(socket.handshake.headers.cookie);
+      const authToken = socket.handshake.auth?.token;
+      const u = authenticate(
+        socket.handshake.headers.cookie,
+        typeof authToken === 'string'
+          ? 'Bearer ' + authToken
+          : socket.handshake.headers.authorization,
+      );
       if (!u) return next(new Error('Sessão inválida.'));
       socket.data.user = u;
       next();
@@ -879,7 +919,14 @@ export function createApp({
     });
     const interval = setInterval(() => {
       for (const socket of io.sockets.sockets.values())
-        if (!authenticate(socket.handshake.headers.cookie)) socket.disconnect();
+        if (
+          !get(
+            'SELECT 1 FROM sessions WHERE hash=? AND expires>?',
+            socket.data.user.session_hash,
+            Date.now(),
+          )
+        )
+          socket.disconnect();
     }, 30000);
     interval.unref();
     io.on('close', () => clearInterval(interval));
