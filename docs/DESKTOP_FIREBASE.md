@@ -4,7 +4,7 @@ A versão 0.4 inclui a interface no instalador Electron e usa Firebase Authentic
 
 ## Começar
 
-1. Baixe [Papotato-Setup-0.4.0.exe](https://github.com/Harleyzinn/papotato-web/releases/download/desktop-v0.4.0/Papotato-Setup-0.4.0.exe) e instale no Windows 10/11 x64. O hash está na [página da release](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.4.0).
+1. Baixe [Papotato-Setup-0.4.1.exe](https://github.com/Harleyzinn/papotato-web/releases/download/desktop-v0.4.1/Papotato-Setup-0.4.1.exe) e instale no Windows 10/11 x64. O hash está na [página da release](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.4.1).
 2. Crie sua conta, crie uma comunidade e copie o código de convite. Seus amigos instalam o mesmo programa, criam suas contas e entram pelo código.
 3. Texto, convites, canais privados, amigos, moderação e arquivos usam o banco compartilhado. Não há usuários ou mensagens de demonstração.
 4. Entre em um canal de voz para testar os dispositivos e, depois, conectar a chamada.
@@ -23,7 +23,7 @@ Ao abrir e entrar na conta proprietária, o programa pergunta se você quer:
 
 O botão “Servidor de chamadas” permite mudar a escolha durante o uso. Os instaladores dos amigos não contêm a chave, não iniciam serviços e não mostram a pergunta de hospedagem. As regras do Firebase permitem somente à conta proprietária mudar o endereço compartilhado. Uma conexão inválida não concede permissões de administrador.
 
-**O PC hospeda o autorizador, não a SFU.** Áudio, vídeo e tela continuam no LiveKit Cloud; o banco continua no Firebase. Se o emissor preferido falhar, o cliente tenta o outro endereço configurado. Não há failover para um Render ainda não provisionado. A troca vale para novas entradas; chamadas já conectadas usam sua conexão com o LiveKit.
+**O PC hospeda o autorizador, não a SFU.** Áudio, vídeo e tela continuam no LiveKit Cloud; o banco continua no Firebase. Se o emissor preferido falhar, o cliente tenta o outro endereço configurado. O Render Free já está provisionado como alternativa. A troca vale para novas entradas; chamadas já conectadas usam sua conexão com o LiveKit.
 
 O conector Cloudflare é obtido da release oficial, com versão e SHA-256 fixados em `desktop/cloudflared.json`. Quick Tunnels são temporários, sem garantia de disponibilidade e voltados a desenvolvimento/testes; suportam até 200 requisições simultâneas. Aqui passam apenas pedidos de autorização, não o tráfego de mídia. Para hospedagem permanente, configure Render ou um túnel nomeado. [Documentação oficial](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
@@ -38,7 +38,9 @@ Nunca inclua `.env` ou `credentials.bin` na release. Se uma chave LiveKit tiver 
 
 ## Render gratuito como alternativa
 
-A integração Render ainda precisa ser conectada para provisionar esse serviço pela conversa. Também é possível criar manualmente um Web Service **Free**, sem disco e sem plano pago, apontando para este repositório:
+O serviço [papotato-media](https://papotato-media.onrender.com/health) está publicado no workspace confirmado pelo proprietário, em Virginia, no plano **Free**, sem disco ou banco Render. O endereço `https://papotato-media.onrender.com/token` foi compartilhado pelo Firebase e já funciona nos aplicativos existentes. Feche e abra o programa para a tela de escolha carregar esse endereço. A versão 0.4.1 também o inclui como alternativa padrão e aguarda até 90 segundos pelo despertar do serviço após inatividade.
+
+Não é necessária uma API key Render no aplicativo. A conexão de administração foi feita por OAuth; somente o servidor recebe as credenciais LiveKit. O serviço usa deploy manual para evitar builds de mudanças exclusivas do instalador. Para reproduzir em outro workspace, crie um Web Service **Free**, sem disco e sem plano pago, apontando para este repositório:
 
 | Configuração | Valor |
 | --- | --- |
@@ -82,4 +84,4 @@ Para outro projeto Firebase, altere a configuração **pública** em `desktop/fi
 - Túnel público local: requisição anônima recusada; usuário Firebase real de teste recebeu token para seu canal de voz autorizado.
 - LiveKit Cloud: duas sessões receberam áudio sintético não silencioso, câmera sintética e tela sintética. Não foi teste de dispositivos físicos ou entre dois computadores de amigos.
 
-Render não foi publicado enquanto a integração estiver desconectada. Não há promessa de uso sem limites dos provedores nem de disponibilidade contínua de túneis temporários.
+Render foi publicado e validado com `/health`, recusa de requisição anônima e emissão real de token LiveKit para um membro Firebase autorizado. O Render Free suspende após 15 minutos sem tráfego e pode levar cerca de um minuto para despertar; o primeiro ingresso pode demorar. Não há promessa de uso sem limites dos provedores nem de disponibilidade contínua de túneis temporários. [Limitações oficiais do plano gratuito](https://render.com/docs/free).

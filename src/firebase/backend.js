@@ -514,7 +514,8 @@ export function createFirebaseBackend(config, { name = 'papotato-desktop', emula
                 Authorization: 'Bearer ' + (await auth.currentUser.getIdToken()),
               },
               body: JSON.stringify({ channelId: p[1] }),
-              signal: AbortSignal.timeout(25000),
+              // Render Free wakes after inactivity; allow its documented cold start.
+              signal: AbortSignal.timeout(parsed.hostname.endsWith('.onrender.com') ? 90000 : 25000),
             });
             data = await response.json();
             if (response.ok) return data;
@@ -527,7 +528,7 @@ export function createFirebaseBackend(config, { name = 'papotato-desktop', emula
         if (!response)
           failure('Não foi possível alcançar o servidor de chamadas. ' + (lastError || ''), 503);
         if (!response.ok)
-          failure(data.error || 'Não foi possível entrar na chamada.', response.status);
+          failure(data?.error || 'O servidor de chamadas está iniciando ou indisponível. Tente novamente.', response.status);
         return data;
       }
       if (p[0] === 'messages') {
