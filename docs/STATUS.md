@@ -39,6 +39,8 @@ Windows x64, Node 24.14.1, LiveKit 1.13.11, SQLite do Node (a API ainda emite av
 
 **Dependências:** auditoria npm sem vulnerabilidades conhecidas no momento da execução. Build Vite passou. Backup consistente criado e aberto.
 
+**CI remoto:** [GitHub Actions — execução 40213517925](https://github.com/Harleyzinn/roda-comunicacao/actions/runs/40213517925) concluiu com sucesso: instalação reproduzível, build, testes e auditoria de dependências de produção. O teste de mídia foi executado localmente, não nesse workflow.
+
 ## Não validado
 
 - Fala/escuta humana, câmera física, seletor nativo de tela, áudio de sistema e retirada física/ocupação/negação de dispositivos.
@@ -46,7 +48,7 @@ Windows x64, Node 24.14.1, LiveKit 1.13.11, SQLite do Node (a API ainda emite av
 - TURN/relay e TLS de produção: fornecida configuração, sem domínio/certificados/host para executar o teste.
 - Interrupção de rede durante chamada e retomada de tracks. O SDK oferece reconexão; isso não equivale a teste deste produto.
 - Carga de oito pessoas, múltiplas telas reais, Safari/iOS/Android, leitores de tela e percurso completo de teclado. Só revisão de CSS responsivo e observação em viewport estreito; desktop não recebeu captura separada.
-- Docker Compose, imagem Docker e workflow de CI em runner remoto não foram executados aqui.
+- Docker Compose e imagem Docker não foram executados neste ambiente. O workflow remoto passou nos checks descritos acima.
 
 ## Pendências do pedido original
 
