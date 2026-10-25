@@ -95,5 +95,7 @@ Para outro projeto Firebase, altere a configuração **pública** em `desktop/fi
 - Firebase de produção: duas contas temporárias trocaram mensagens por convite em tempo real; os dados de QA foram removidos.
 - Túnel público local: requisição anônima recusada; usuário Firebase real de teste recebeu token para seu canal de voz autorizado.
 - LiveKit Cloud: duas sessões receberam áudio sintético não silencioso, câmera sintética e tela sintética. Não foi teste de dispositivos físicos ou entre dois computadores de amigos.
+- Versão 0.5.0: dois renderizadores Electron isolados, com o mesmo esquema seguro `papotato://app`, receberam bytes de áudio e quadros decodificados de câmera/tela sintéticas pelo LiveKit Cloud, usando tokens emitidos pelo Render e contas Firebase temporárias.
+- Atualizador: quatro testes de confirmação, bloqueio em chamada, recuperação de rede e verificações simultâneas; o módulo empacotado consultou a release pública, baixou o instalador real e validou SHA-512 numa sessão de QA representando uma versão anterior. A sessão de QA terminou no estado pronto e não disparou instalação automática.
 
 Render foi publicado e validado com `/health`, recusa de requisição anônima e emissão real de token LiveKit para um membro Firebase autorizado. O Render Free suspende após 15 minutos sem tráfego e pode levar cerca de um minuto para despertar; o primeiro ingresso pode demorar. Não há promessa de uso sem limites dos provedores nem de disponibilidade contínua de túneis temporários. [Limitações oficiais do plano gratuito](https://render.com/docs/free).
