@@ -1,5 +1,7 @@
 # Entrega e verificação — 25/10/2026
 
+Este é o relatório histórico da primeira versão. Para o estado atual do frontend Pages, sessões entre domínios, novos testes e publicação, consulte [RELEASE-0.2.md](RELEASE-0.2.md) e [GITHUB_PAGES.md](GITHUB_PAGES.md).
+
 ## Implementado
 
 - Cadastro/login/logout reais, scrypt, cookies seguros em produção, expiração e revogação de sessões. Sem envio fictício de e-mail.

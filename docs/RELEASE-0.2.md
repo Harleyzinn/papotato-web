@@ -18,8 +18,11 @@
 - Novo teste com duas contas bearer em origem diferente: preflight/CORS, rejeitar origem estranha, sessão sem cookie, privacidade de token/hash, convites com subdiretório, anexos autenticados, entrega efetiva de mensagens por sockets e revogação da sessão.
 - `npm run build:pages` e `npm run check:pages`: caminhos de script/CSS/favicon, arquivos presentes, fallback e `.nojekyll` validados.
 - Build de produção servido em `localhost:4173/papotato-web/`, API real em `localhost:3000`: cadastro, comunidade, envio e recarga do histórico verificados no navegador integrado. Dados de QA isolados em diretório ignorado pelo Git.
-- Teste de mídia sintética com dois clientes e SFU local já existe em `npm run test:media`; seus resultados anteriores e os limites físicos/rede estão no relatório histórico. Chamadas físicas e duas redes continuam sem validação.
-- Não há Docker neste ambiente para executar a imagem/volume. A visualização do navegador integrado é estreita; os breakpoints de desktop foram revisados, mas não houve sessão de navegador em viewport desktop independente nesta versão.
+- `npm run test:media` passou novamente: duas sessões receberam áudio não silencioso, vídeo e faixa de tela simultâneos pela SFU local. No navegador, a pré-entrada lazy e conexão/saída da SFU foram verificadas sem ativar dispositivos físicos. Chamadas físicas e duas redes continuam sem validação.
+- Imagem privada foi enviada pela API, entregue por socket e decodificada no navegador através de object URL autenticada (`loaded=true`, `usesBlob=true`).
+- Layout verificado em duas sessões de navegador: 614 px e 1280 px, sem overflow horizontal. Login e histórico persistente também foram verificados na sessão desktop independente. Capturas em `docs/screenshots/papotato-pages-local.png` e `papotato-desktop.png`. Não houve teste em telefone físico.
+- Não há Docker neste ambiente para executar a imagem/volume.
+- [Checks remotos](https://github.com/Harleyzinn/papotato-web/actions/runs/40221144058) e [deploy Pages](https://github.com/Harleyzinn/papotato-web/actions/runs/40221144047) concluídos com sucesso. URL final aberta no navegador e confirmada com HTTP 200; scripts, CSS e favicon também responderam 200. Captura `docs/screenshots/papotato-pages-public.png` registra o estado real com API pendente.
 
 ## Condição de entrega
 
