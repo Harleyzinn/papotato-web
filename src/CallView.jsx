@@ -11,6 +11,7 @@ import {
   StartAudio,
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import { IS_DESKTOP } from './client.js';
 export default function CallView({ limits }) {
   const room = useRoomContext(),
     participants = useParticipants(),
@@ -19,7 +20,7 @@ export default function CallView({ limits }) {
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ]);
   const [focused, setFocused] = useState(''),
-    [quality, setQuality] = useState('480'),
+    [quality, setQuality] = useState(IS_DESKTOP ? '720' : '480'),
     [error, setError] = useState(''),
     [stats, setStats] = useState({}),
     [screen, setScreen] = useState(false);
@@ -134,6 +135,7 @@ export default function CallView({ limits }) {
         >
           <option value="480">Tela 480p</option>
           <option value="720">Tela 720p</option>
+          {IS_DESKTOP && <option value="1080">Tela 1080p</option>}
         </select>
         <button
           className="lk-button"

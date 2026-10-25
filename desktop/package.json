@@ -1,0 +1,9 @@
+{
+  "name": "papotato-desktop",
+  "version": "0.4.0",
+  "description": "Papotato para Windows com Firebase",
+  "main": "main.cjs",
+  "author": "Papotato",
+  "license": "UNLICENSED",
+  "dependencies": {}
+}

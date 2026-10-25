@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { IS_DESKTOP } from './client.js';
 import {
   LiveKitRoom,
   PreJoin,
@@ -87,7 +88,10 @@ export default function MediaUI({
               <span className="status-dot" />
               <strong>{call.channel.name}</strong>
               <small>
-                Até {call.limits?.participantsPerCall || 4} pessoas · transporte criptografado
+                {IS_DESKTOP
+                  ? 'Capacidade conforme o serviço LiveKit'
+                  : `Até ${call.limits?.participantsPerCall || 4} pessoas`}{' '}
+                · transporte criptografado
               </small>
             </div>
             <button onClick={() => setCallMin(!callMin)}>

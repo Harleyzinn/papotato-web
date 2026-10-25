@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:"
+    />
+    <title>Compartilhar tela</title>
+    <style>
+      body {
+        font: 15px system-ui;
+        background: #191c22;
+        color: #f4f2ed;
+        margin: 25px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      p {
+        color: #b1b6bf;
+      }
+      #sources {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+      button {
+        background: #252b34;
+        border: 1px solid #444b58;
+        color: inherit;
+        border-radius: 12px;
+        padding: 12px;
+        cursor: pointer;
+        text-align: left;
+      }
+      button:hover,
+      button:focus-visible {
+        outline: 2px solid #f0c888;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: 140px;
+        object-fit: contain;
+        margin-bottom: 10px;
+      }
+      label {
+        display: block;
+        margin: 20px 0;
+      }
+      #cancel {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>O que você quer compartilhar?</h1>
+    <p>A transmissão só começa após escolher uma tela ou janela.</p>
+    <label
+      ><input id="audio" type="checkbox" /> Incluir áudio do sistema quando disponível no
+      Windows</label
+    ><button id="cancel">Cancelar</button>
+    <div id="sources"></div>
+    <script src="picker.js"></script>
+  </body>
+</html>

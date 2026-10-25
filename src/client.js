@@ -3,6 +3,23 @@ const configured = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 export const API_BASE = configured;
 export const APP_BASE = import.meta.env.BASE_URL;
 export const needsBackend = import.meta.env.VITE_REQUIRE_BACKEND === 'true' && !configured;
+export const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true';
+let desktopBackend;
+export function getDesktopBackend() {
+  if (!desktopBackend)
+    desktopBackend = (async () => {
+      const config = await window.papotatoDesktop.getConfig();
+      if (!config) throw new Error('Configure o projeto Firebase.');
+      const { createFirebaseBackend } = await import('./firebase/backend.js');
+      return createFirebaseBackend(config);
+    })();
+  return desktopBackend;
+}
+export async function createRealtime(options) {
+  if (IS_DESKTOP) return (await getDesktopBackend()).realtime();
+  const { io } = await import('socket.io-client');
+  return io(API_BASE || undefined, options);
+}
 const tokenKey = 'papotato-session';
 export const getToken = () => sessionStorage.getItem(tokenKey);
 export const clearToken = () => sessionStorage.removeItem(tokenKey);
@@ -19,6 +36,7 @@ export class ApiError extends Error {
   }
 }
 export async function apiFetch(path, options = {}) {
+  if (IS_DESKTOP) return (await getDesktopBackend()).apiFetch(path, options);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeout || 20000);
   const headers = new Headers(options.headers);
@@ -44,6 +62,7 @@ export async function apiFetch(path, options = {}) {
   }
 }
 export async function api(path, method = 'GET', body) {
+  if (IS_DESKTOP) return (await getDesktopBackend()).api(path, method, body);
   const response = await apiFetch(path, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,

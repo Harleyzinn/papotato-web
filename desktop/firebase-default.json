@@ -1,0 +1,13 @@
+{
+  "firebase": {
+    "projectId": "papotato-desktop-e9fa1a",
+    "appId": "1:14218720438:web:ecc8b19420a50e6e3a6217",
+    "storageBucket": "papotato-desktop-e9fa1a.firebasestorage.app",
+    "apiKey": "AIzaSyCmxPlq26au1hmg_2vECA0LHNV-Dz9_NEA",
+    "authDomain": "papotato-desktop-e9fa1a.firebaseapp.com",
+    "messagingSenderId": "14218720438",
+    "projectNumber": "14218720438",
+    "version": "2"
+  },
+  "mediaTokenUrl": ""
+}

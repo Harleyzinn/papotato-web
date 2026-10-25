@@ -1,10 +1,21 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
-import { api, API_BASE, APP_BASE, asset, clearToken, getToken } from './client.js';
+import {
+  api,
+  API_BASE,
+  APP_BASE,
+  asset,
+  clearToken,
+  getToken,
+  IS_DESKTOP,
+  createRealtime,
+} from './client.js';
+import DesktopGate, { DesktopInfo } from './DesktopGate.jsx';
+import DesktopHosting from './DesktopHosting.jsx';
 import ServiceGate from './ServiceGate.jsx';
 import UsagePanel from './UsagePanel.jsx';
 const MediaUI = lazy(() => import('./MediaUI.jsx'));
 import { createRoot } from 'react-dom/client';
-import { io } from 'socket.io-client';
+
 import Markdown from 'react-markdown';
 import Extras, {
   UploadButton,
@@ -217,7 +228,11 @@ function Auth({ onLogin }) {
           <Shield size={16} />
           <span>Sua senha é protegida. Você escolhe com quem conversar.</span>
         </div>
-        <small>Recuperação e verificação de e-mail ainda não disponíveis.</small>
+        <small>
+          {IS_DESKTOP
+            ? 'Contas protegidas pelo Firebase Authentication.'
+            : 'Recuperação e verificação de e-mail ainda não disponíveis.'}
+        </small>
       </section>
     </main>
   );
@@ -317,62 +332,74 @@ function App() {
         setNotice('Você entrou na comunidade!');
       } else await refreshSpaces();
     });
-    const s = io(API_BASE || undefined, {
+    let s,
+      disposed = false;
+    const realtimeOptions = {
       auth: (callback) => callback({ token: getToken() }),
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000,
-    });
-    socket.current = s;
-    s.on('connect', () => {
-      setConnected(true);
-      if (channelRef.current) {
-        s.emit('watch', channelRef.current);
-        attempt(() => refreshMessages());
-      }
-    });
-    s.on('disconnect', () => setConnected(false));
-    s.on('connect_error', (e) => {
-      setConnected(false);
-      if (e.message === 'Sessão inválida.') {
-        clearToken();
-        setCall(null);
-        setUser(null);
-      }
-    });
-    s.on('session-revoked', () => {
-      clearToken();
-      setCall(null);
-      setUser(null);
-      setSpace(null);
-      setChannel(null);
-    });
-    s.on('message', (m) => {
-      if (channelRef.current === m.channel_id) {
-        setMessages((old) => (old.some((x) => x.id === m.id) ? old : [...old, m]));
-        api('/channels/' + m.channel_id + '/read', 'POST').catch(() => {});
-      }
-      if (
-        document.hidden &&
-        m.user_id !== userRef.current?.id &&
-        userRef.current?.status !== 'busy' &&
-        'Notification' in window &&
-        Notification.permission === 'granted' &&
-        localStorage.getItem('roda-notifications') === 'true'
-      )
-        new Notification('Nova mensagem no Papotato', {
-          body: m.display + ' enviou uma mensagem.',
+    };
+    createRealtime(realtimeOptions)
+      .then((instance) => {
+        if (disposed) {
+          instance.disconnect();
+          return;
+        }
+        s = instance;
+        socket.current = s;
+        s.on('connect', () => {
+          setConnected(true);
+          if (channelRef.current) {
+            s.emit('watch', channelRef.current);
+            attempt(() => refreshMessages());
+          }
         });
-    });
-    s.on('refresh', () => attempt(() => refreshMessages()));
-    s.on('typing', (v) => {
-      if (v.channel !== channelRef.current) return;
-      setTyping(v.display);
-      clearTimeout(typingTimer.current);
-      typingTimer.current = setTimeout(() => setTyping(''), 3000);
-    });
+        s.on('disconnect', () => setConnected(false));
+        s.on('connect_error', (e) => {
+          setConnected(false);
+          if (e.message === 'Sessão inválida.') {
+            clearToken();
+            setCall(null);
+            setUser(null);
+          }
+        });
+        s.on('session-revoked', () => {
+          clearToken();
+          setCall(null);
+          setUser(null);
+          setSpace(null);
+          setChannel(null);
+        });
+        s.on('message', (m) => {
+          if (channelRef.current === m.channel_id) {
+            setMessages((old) => (old.some((x) => x.id === m.id) ? old : [...old, m]));
+            api('/channels/' + m.channel_id + '/read', 'POST').catch(() => {});
+          }
+          if (
+            document.hidden &&
+            m.user_id !== userRef.current?.id &&
+            userRef.current?.status !== 'busy' &&
+            'Notification' in window &&
+            Notification.permission === 'granted' &&
+            localStorage.getItem('roda-notifications') === 'true'
+          )
+            new Notification('Nova mensagem no Papotato', {
+              body: m.display + ' enviou uma mensagem.',
+            });
+        });
+        s.on('refresh', () => attempt(() => refreshMessages()));
+        s.on('typing', (v) => {
+          if (v.channel !== channelRef.current) return;
+          setTyping(v.display);
+          clearTimeout(typingTimer.current);
+          typingTimer.current = setTimeout(() => setTyping(''), 3000);
+        });
+      })
+      .catch(report);
     return () => {
-      s.disconnect();
+      disposed = true;
+      s?.disconnect();
       clearTimeout(typingTimer.current);
     };
   }, [user?.id]);
@@ -478,7 +505,11 @@ function App() {
     await attempt(async () => {
       await api('/health').then((h) => {
         if (!h.mediaConfigured)
-          throw new Error('Configure o LiveKit no .env para iniciar chamadas. Veja o README.');
+          throw new Error(
+            IS_DESKTOP
+              ? 'Configure o emissor LiveKit em Configurações → Conexão Firebase e LiveKit.'
+              : 'Configure o LiveKit no .env para iniciar chamadas. Veja o README.',
+          );
       });
       setPrejoin(c);
     });
@@ -520,6 +551,7 @@ function App() {
   if (!user) return <Auth onLogin={setUser} />;
   return (
     <div className="app-shell">
+      {IS_DESKTOP && <DesktopHosting user={user} />}
       <Extras
         space={currentSpace}
         user={user}
@@ -1157,7 +1189,10 @@ function App() {
                     onClick={() =>
                       attempt(async () => {
                         await api(
-                          '/invites/' + new URL(inviteResult).searchParams.get('invite'),
+                          '/invites/' +
+                            (IS_DESKTOP
+                              ? inviteResult
+                              : new URL(inviteResult).searchParams.get('invite')),
                           'DELETE',
                         );
                         setInviteResult('');
@@ -1206,7 +1241,7 @@ function App() {
                 Canal privado (administradores e pessoas selecionadas)
               </label>
               <label>
-                Membros autorizados (IDs separados por vírgula)
+                Membros autorizados (IDs de usuário separados por vírgula)
                 <input name="members" placeholder="Opcional para canal privado" />
               </label>
               <button className="primary">
@@ -1217,7 +1252,7 @@ function App() {
           )}
           {modal === 'settings' && (
             <div className="settings">
-              <UsagePanel />
+              {IS_DESKTOP ? <DesktopInfo /> : <UsagePanel />}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1441,8 +1476,7 @@ function App() {
               </p>
               <p className="muted">
                 A mídia usa LiveKit com criptografia de transporte; não há criptografia ponta a
-                ponta. O histórico fica no servidor da comunidade. Máximo configurado: 4
-                participantes por chamada.
+                ponta. {IS_DESKTOP ? 'O histórico fica no Firebase. A capacidade das chamadas depende do serviço LiveKit.' : 'O histórico fica no servidor da comunidade. Máximo configurado: 4 participantes por chamada.'}
               </p>
               <button className="primary" onClick={() => setModal('create')}>
                 Criar uma comunidade
@@ -1593,7 +1627,13 @@ function App() {
   );
 }
 createRoot(document.getElementById('root')).render(
-  <ServiceGate>
-    <App />
-  </ServiceGate>,
+  IS_DESKTOP ? (
+    <DesktopGate>
+      <App />
+    </DesktopGate>
+  ) : (
+    <ServiceGate>
+      <App />
+    </ServiceGate>
+  ),
 );

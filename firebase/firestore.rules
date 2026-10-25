@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function profilePath(uid) { return /databases/$(database)/documents/profiles/$(uid); }
+    function active() { return signed() && exists(profilePath(request.auth.uid)) && (get(profilePath(request.auth.uid)).data.revokedAt == null || request.auth.token.auth_time * 1000 >= get(profilePath(request.auth.uid)).data.revokedAt.toMillis()); }
+    function sp(sid) { return /databases/$(database)/documents/spaces/$(sid); }
+    function mp(sid,uid) { return /databases/$(database)/documents/spaces/$(sid)/members/$(uid); }
+    function noBlock(a,b) { return !exists(/databases/$(database)/documents/blocks/$(a)/targets/$(b)) && !exists(/databases/$(database)/documents/blocks/$(b)/targets/$(a)); }
+    function member(sid) { return active() && exists(mp(sid,request.auth.uid)) && !exists(/databases/$(database)/documents/spaces/$(sid)/bans/$(request.auth.uid)) && (get(sp(sid)).data.kind != 'direct' || noBlock(get(sp(sid)).data.peer_a,get(sp(sid)).data.peer_b)); }
+    function owner(sid) { return active() && get(sp(sid)).data.owner == request.auth.uid; }
+    function admin(sid) { return member(sid) && get(mp(sid,request.auth.uid)).data.role in ['owner','admin']; }
+    function adminAfter(sid) { return active() && (getAfter(sp(sid)).data.owner == request.auth.uid || getAfter(mp(sid,request.auth.uid)).data.role in ['owner','admin']); }
+    function channelReadable(cid) { let c=get(/databases/$(database)/documents/channels/$(cid)).data; return member(c.space_id) && (!c.private || admin(c.space_id) || request.auth.uid in c.members); }
+    function friend(a,b) { return noBlock(a,b) && ((exists(/databases/$(database)/documents/relationships/$(a+'_'+b)) && get(/databases/$(database)/documents/relationships/$(a+'_'+b)).data.state == 'accepted') || (exists(/databases/$(database)/documents/relationships/$(b+'_'+a)) && get(/databases/$(database)/documents/relationships/$(b+'_'+a)).data.state == 'accepted')); }
+    function validInvite(code,sid) { let i=get(/databases/$(database)/documents/invites/$(code)).data; return i.space_id==sid && !i.revoked && i.expires>request.time.toMillis() && i.uses<i.max_uses; }
+    match /infrastructure/{id} {
+      allow get: if active();
+      allow create,update: if id=='media' && active() && get(/databases/$(database)/documents/infrastructure/owner).data.uid==request.auth.uid && request.resource.data.keys().hasOnly(['desktopUrl','renderUrl','enabled','mode','updatedAt']) && request.resource.data.desktopUrl is string && (request.resource.data.desktopUrl=='' || request.resource.data.desktopUrl.matches('^https://[a-z0-9-]+[.]trycloudflare[.]com/token$')) && request.resource.data.renderUrl is string && (request.resource.data.renderUrl=='' || request.resource.data.renderUrl.matches('^https://[a-z0-9.-]+(:[0-9]+)?/[^ ]*$')) && request.resource.data.enabled is bool && request.resource.data.mode in ['pc','render'] && request.resource.data.updatedAt==request.time;
+    }
+    match /usernames/{name} {
+      allow get: if signed();
+      allow create: if signed() && name.matches('^[a-z0-9_]{3,24}$') && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid==request.auth.uid;
+      allow delete: if signed() && resource.data.uid==request.auth.uid && !exists(profilePath(request.auth.uid));
+    }
+    match /profiles/{uid} {
+      allow get: if signed() && (request.auth.uid==uid || active());
+      allow create: if signed() && request.auth.uid==uid && request.resource.data.keys().hasOnly(['id','username','display','bio','status','custom_status','created','lastActive','connected','revokedAt']) && request.resource.data.id==uid && request.resource.data.username.matches('^[a-z0-9_]{3,24}$') && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid==uid && request.resource.data.created==request.time && request.resource.data.revokedAt==null && request.resource.data.display is string && request.resource.data.display.size()>0 && request.resource.data.display.size()<=60;
+      allow update: if active() && request.auth.uid==uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['display','bio','status','custom_status','lastActive','connected','revokedAt']) && request.resource.data.display is string && request.resource.data.display.size()>0 && request.resource.data.display.size()<=60 && request.resource.data.bio is string && request.resource.data.bio.size()<=300 && request.resource.data.status in ['online','away','busy','invisible'] && request.resource.data.custom_status is string && request.resource.data.custom_status.size()<=80 && request.resource.data.connected is bool && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastActive']) || request.resource.data.lastActive==request.time) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['revokedAt']) || request.resource.data.revokedAt==request.time);
+    }
+    match /spaces/{sid} {
+      allow get: if active() && (!exists(sp(sid)) || member(sid));
+      allow create: if active() && request.resource.data.keys().hasOnly(['name','description','owner','kind','participants','peer_a','peer_b','created']) && request.resource.data.owner==request.auth.uid && request.resource.data.kind in ['community','direct','group'] && request.resource.data.name is string && request.resource.data.name.size()>0 && request.resource.data.name.size()<=100 && request.resource.data.description is string && request.resource.data.description.size()<=300 && request.resource.data.created==request.time && getAfter(mp(sid,request.auth.uid)).data.role=='owner';
+      allow update: if owner(sid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','description','owner']) && (request.resource.data.owner==resource.data.owner || (exists(mp(sid,request.resource.data.owner)) && getAfter(mp(sid,request.resource.data.owner)).data.role=='owner' && getAfter(mp(sid,request.auth.uid)).data.role=='admin'));
+      match /members/{uid} {
+        allow get: if active() && (request.auth.uid==uid || member(sid));
+        allow list: if member(sid);
+        allow create: if active() && request.resource.data.keys().hasOnly(['user_id','role','invite']) && request.resource.data.user_id==uid && !exists(/databases/$(database)/documents/spaces/$(sid)/bans/$(uid)) && (
+          (uid==request.auth.uid && request.resource.data.role=='owner' && getAfter(sp(sid)).data.owner==uid && request.resource.data.invite==null) ||
+          (getAfter(sp(sid)).data.owner==request.auth.uid && getAfter(sp(sid)).data.kind in ['direct','group'] && uid!=request.auth.uid && request.resource.data.role=='member' && friend(uid,request.auth.uid)) ||
+          (uid==request.auth.uid && request.resource.data.role=='member' && request.resource.data.invite is string && validInvite(request.resource.data.invite,sid) && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.invite)).data.uses==get(/databases/$(database)/documents/invites/$(request.resource.data.invite)).data.uses+1 && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.invite)).data.lastJoined==uid)
+        );
+        allow update: if owner(sid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) && request.resource.data.role in ['owner','admin','member'] && (request.resource.data.role!='owner' || getAfter(sp(sid)).data.owner==uid) && (uid!=get(sp(sid)).data.owner || request.resource.data.role=='owner' || getAfter(sp(sid)).data.owner!=uid);
+        allow delete: if active() && uid!=get(sp(sid)).data.owner && (request.auth.uid==uid || owner(sid) || (admin(sid) && resource.data.role=='member'));
+      }
+      match /bans/{uid} {
+        allow read: if admin(sid);
+        allow create: if admin(sid) && uid!=request.auth.uid && uid!=get(sp(sid)).data.owner && (owner(sid) || get(mp(sid,uid)).data.role=='member') && request.resource.data.actor==request.auth.uid && request.resource.data.created==request.time;
+        allow delete: if admin(sid);
+      }
+      match /reports/{rid} {
+        allow read: if admin(sid);
+        allow create: if member(sid) && request.resource.data.keys().hasOnly(['reporter','target','reason','created']) && request.resource.data.reporter==request.auth.uid && exists(mp(sid,request.resource.data.target)) && request.resource.data.reason is string && request.resource.data.reason.size()>0 && request.resource.data.reason.size()<=1000 && request.resource.data.created==request.time;
+      }
+      match /audit/{aid} {
+        allow read: if admin(sid);
+        allow create: if admin(sid) && request.resource.data.keys().hasOnly(['actor','action','created']) && request.resource.data.actor==request.auth.uid && request.resource.data.action is string && request.resource.data.action.size()<=1000 && request.resource.data.created==request.time;
+      }
+    }
+    match /userSpaces/{uid}/items/{sid} {
+      allow read: if active() && request.auth.uid==uid;
+      allow create: if active() && request.resource.data.keys().hasOnly(['space_id']) && request.resource.data.space_id==sid && getAfter(mp(sid,uid)).data.user_id==uid && (request.auth.uid==uid || (getAfter(sp(sid)).data.owner==request.auth.uid && getAfter(sp(sid)).data.kind in ['direct','group'] && friend(uid,request.auth.uid)));
+      allow delete: if active() && (request.auth.uid==uid || admin(sid));
+    }
+    match /channels/{cid} {
+      allow read: if member(resource.data.space_id) && (!resource.data.private || admin(resource.data.space_id) || request.auth.uid in resource.data.members);
+      allow create: if adminAfter(request.resource.data.space_id) && request.resource.data.keys().hasOnly(['id','space_id','name','kind','private','members','position']) && request.resource.data.id==cid && request.resource.data.name is string && request.resource.data.name.size()>0 && request.resource.data.name.size()<=60 && request.resource.data.kind in ['text','voice'] && request.resource.data.private is bool && request.resource.data.members is list && request.resource.data.position is number;
+      allow update: if admin(resource.data.space_id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','private','members','position']);
+      allow delete: if admin(resource.data.space_id);
+      match /messages/{mid} {
+        allow read: if channelReadable(cid);
+        allow create: if channelReadable(cid) && get(/databases/$(database)/documents/channels/$(cid)).data.kind=='text' && request.resource.data.keys().hasOnly(['id','channel_id','user_id','body','created','edited','reply_id','pinned','reactions','deleted']) && request.resource.data.id==mid && request.resource.data.channel_id==cid && request.resource.data.user_id==request.auth.uid && request.resource.data.body is string && request.resource.data.body.size()>0 && request.resource.data.body.size()<=4000 && request.resource.data.created==request.time && request.resource.data.edited==null && !request.resource.data.pinned && !request.resource.data.deleted && request.resource.data.reactions=={} && (request.resource.data.reply_id==null || exists(/databases/$(database)/documents/channels/$(cid)/messages/$(request.resource.data.reply_id)));
+        allow update: if channelReadable(cid) && (
+          (resource.data.user_id==request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body','edited','deleted']) && request.resource.data.body is string && request.resource.data.body.size()>0 && request.resource.data.body.size()<=4000 && request.resource.data.edited==request.time && request.resource.data.deleted is bool) ||
+          (admin(get(/databases/$(database)/documents/channels/$(cid)).data.space_id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned']) && request.resource.data.pinned is bool) ||
+          (admin(get(/databases/$(database)/documents/channels/$(cid)).data.space_id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body','deleted','edited']) && request.resource.data.deleted==true && request.resource.data.body=='_Mensagem excluída._' && request.resource.data.edited==request.time) ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) && request.resource.data.reactions is map && request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid]) && request.resource.data.reactions[request.auth.uid] is list && request.resource.data.reactions[request.auth.uid].size()<=4 && request.resource.data.reactions[request.auth.uid].hasOnly(['💚','👍','😂','🎉']) && request.resource.data.reactions[request.auth.uid].toSet().size()==request.resource.data.reactions[request.auth.uid].size())
+        );
+      }
+      match /typing/{uid} {
+        allow read: if channelReadable(cid);
+        allow write: if active() && request.auth.uid==uid && channelReadable(cid) && request.resource.data.keys().hasOnly(['display','at']) && request.resource.data.display==get(profilePath(uid)).data.display && request.resource.data.at==request.time;
+      }
+    }
+    match /messageLocations/{mid} {
+      allow read: if channelReadable(resource.data.channel_id);
+      allow create: if active() && request.resource.data.keys().hasOnly(['channel_id','user_id']) && request.resource.data.user_id==request.auth.uid && getAfter(/databases/$(database)/documents/channels/$(request.resource.data.channel_id)/messages/$(mid)).data.user_id==request.auth.uid;
+    }
+    match /invites/{code} {
+      allow get: if active();
+      allow list: if admin(resource.data.space_id);
+      allow create: if admin(request.resource.data.space_id) && get(sp(request.resource.data.space_id)).data.kind=='community' && request.resource.data.keys().hasOnly(['code','space_id','name','expires','max_uses','uses','revoked','lastJoined']) && request.resource.data.code==code && request.resource.data.uses==0 && request.resource.data.max_uses is int && request.resource.data.max_uses>0 && request.resource.data.expires>request.time.toMillis() && request.resource.data.revoked==false && request.resource.data.lastJoined==null;
+      allow update: if (admin(resource.data.space_id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked']) && request.resource.data.revoked is bool) || (active() && validInvite(code,resource.data.space_id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses','lastJoined']) && request.resource.data.uses==resource.data.uses+1 && request.resource.data.lastJoined==request.auth.uid && !exists(mp(resource.data.space_id,request.auth.uid)) && getAfter(mp(resource.data.space_id,request.auth.uid)).data.role=='member' && getAfter(mp(resource.data.space_id,request.auth.uid)).data.invite==code);
+    }
+    match /relationships/{key} {
+      allow read: if active() && request.auth.uid in resource.data.parties;
+      allow get: if active() && (!exists(/databases/$(database)/documents/relationships/$(key)) || request.auth.uid in resource.data.parties);
+      allow create: if active() && request.resource.data.keys().hasOnly(['sender','recipient','parties','state']) && request.resource.data.sender==request.auth.uid && request.resource.data.recipient!=request.auth.uid && request.resource.data.parties==[request.auth.uid,request.resource.data.recipient] && request.resource.data.state=='pending' && noBlock(request.auth.uid,request.resource.data.recipient) && (key==request.auth.uid+'_'+request.resource.data.recipient || key==request.resource.data.recipient+'_'+request.auth.uid);
+      allow update: if active() && request.auth.uid==resource.data.recipient && resource.data.state=='pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state']) && request.resource.data.state=='accepted' && noBlock(resource.data.sender,resource.data.recipient);
+      allow delete: if active() && (!exists(/databases/$(database)/documents/relationships/$(key)) || request.auth.uid in resource.data.parties);
+    }
+    match /blocks/{uid}/targets/{target} {
+      allow get: if active() && (request.auth.uid==uid || request.auth.uid==target);
+      allow list: if active() && request.auth.uid==uid;
+      allow create: if active() && request.auth.uid==uid && target!=uid && request.resource.data.keys().hasOnly(['created']) && request.resource.data.created==request.time;
+      allow delete: if active() && request.auth.uid==uid;
+    }
+    match /reads/{uid}/channels/{cid} {
+      allow read: if active() && request.auth.uid==uid;
+      allow write: if active() && request.auth.uid==uid && channelReadable(cid) && request.resource.data.keys().hasOnly(['lastRead']) && request.resource.data.lastRead==request.time;
+    }
+    match /files/{fid} {
+      allow read: if active() && (resource.data.user_id==request.auth.uid || channelReadable(resource.data.channel_id));
+      allow create: if channelReadable(request.resource.data.channel_id) && request.resource.data.keys().hasOnly(['id','channel_id','user_id','name','mime','size','chunks','complete','created']) && request.resource.data.id==fid && request.resource.data.user_id==request.auth.uid && request.resource.data.name is string && request.resource.data.name.size()<=150 && request.resource.data.mime in ['image/png','image/jpeg','image/webp','video/mp4','audio/ogg','audio/mpeg','application/octet-stream'] && request.resource.data.size is int && request.resource.data.size>0 && request.resource.data.chunks is int && request.resource.data.chunks>0 && request.resource.data.complete==false && request.resource.data.created==request.time;
+      allow update: if active() && resource.data.user_id==request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['complete']) && request.resource.data.complete is bool;
+      allow delete: if active() && (resource.data.user_id==request.auth.uid || admin(get(/databases/$(database)/documents/channels/$(resource.data.channel_id)).data.space_id));
+      match /chunks/{chunk} {
+        function metadata() { return get(/databases/$(database)/documents/files/$(fid)).data; }
+        allow read: if metadata().complete && channelReadable(metadata().channel_id);
+        allow create: if active() && metadata().user_id==request.auth.uid && !metadata().complete && channelReadable(metadata().channel_id) && request.resource.data.keys().hasOnly(['data','bytes','digest']) && request.resource.data.data is string && request.resource.data.data.size()<=174764 && request.resource.data.bytes is int && request.resource.data.bytes>0 && request.resource.data.bytes<=131072 && request.resource.data.digest.matches('^[a-f0-9]{64}$');
+        allow delete: if active() && (metadata().user_id==request.auth.uid || admin(get(/databases/$(database)/documents/channels/$(metadata().channel_id)).data.space_id));
+      }
+    }
+  }
+}

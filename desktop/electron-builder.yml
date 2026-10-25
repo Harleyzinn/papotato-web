@@ -1,0 +1,35 @@
+appId: com.papotato.desktop
+productName: Papotato
+directories:
+  app: desktop
+  output: release
+files:
+  - main.cjs
+  - preload.cjs
+  - picker-preload.cjs
+  - picker.html
+  - picker.js
+  - assets/**
+  - dist/**
+  - package.json
+  - firebase-default.json
+  - hosting.cjs
+  - media-broker.cjs
+  - cloudflared.json
+  - '!node_modules/**'
+beforeBuild: desktop/before-build.cjs
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: desktop/assets/icon.ico
+  signExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  installerIcon: desktop/assets/icon.ico
+  uninstallerIcon: desktop/assets/icon.ico
+artifactName: Papotato-Setup-${version}.${ext}

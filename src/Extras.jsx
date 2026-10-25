@@ -1,4 +1,4 @@
-import { api, apiFetch } from './client.js';
+import { api, apiFetch, IS_DESKTOP } from './client.js';
 import { AttachmentLink, AttachmentImage } from './PrivateFile.jsx';
 export { AttachmentLink, AttachmentImage };
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,7 +6,10 @@ import { Paperclip, Shield, X, MessagesSquare } from 'lucide-react';
 export function UploadButton({ channel, onUploaded, onError }) {
   const [busy, setBusy] = useState(false);
   return (
-    <label className="upload-button" title="Anexar arquivo (até 2 MiB)">
+    <label
+      className="upload-button"
+      title={IS_DESKTOP ? 'Anexar arquivo' : 'Anexar arquivo (até 2 MiB)'}
+    >
       <Paperclip size={20} />
       <span className="sr-only">Anexar arquivo</span>
       <input
@@ -16,7 +19,7 @@ export function UploadButton({ channel, onUploaded, onError }) {
           const input = e.currentTarget;
           const file = input.files?.[0];
           if (!file) return;
-          if (file.size > 2 * 1024 * 1024) {
+          if (!IS_DESKTOP && file.size > 2 * 1024 * 1024) {
             onError(new Error('O limite gratuito por arquivo é 2 MiB.'));
             input.value = '';
             return;
@@ -94,7 +97,9 @@ export function GroupCreator({ friends, user, onOpen, onError }) {
             {f.display}
           </label>
         ))}
-        <small>Selecione de 1 a 7 amigos.</small>
+        <small>
+          {IS_DESKTOP ? 'Selecione os amigos para esta conversa.' : 'Selecione de 1 a 7 amigos.'}
+        </small>
         <button className="secondary">Abrir conversa privada</button>
       </form>
     </details>

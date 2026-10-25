@@ -1,0 +1,24 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "space_id", "order": "ASCENDING" },
+        { "fieldPath": "private", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "space_id", "order": "ASCENDING" },
+        { "fieldPath": "members", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "chunks", "fieldPath": "data", "indexes": [] },
+    { "collectionGroup": "chunks", "fieldPath": "digest", "indexes": [] }
+  ]
+}

@@ -5,3 +5,11 @@ data/
 *.log
 coverage/
 .tools/
+desktop/dist/
+release/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.firebase.local.json
+.firebase/
+desktop/media-broker.cjs
