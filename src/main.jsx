@@ -112,7 +112,7 @@ function Auth({ onLogin }) {
       <div className="auth-story">
         <a className="brand" href="/">
           <img src="/logo.svg" alt="" />
-          roda<span>JUNTO É MELHOR</span>
+          papotato<span>JUNTO É MELHOR</span>
         </a>
         <div className="story-content">
           <span className="eyebrow">
@@ -133,7 +133,7 @@ function Auth({ onLogin }) {
             <div className="orbit-circle c1" />
             <div className="orbit-circle c2" />
             <div className="orbit-circle c3" />
-            <img src="/logo.svg" alt="Símbolo Roda" />
+            <img src="/logo.svg" alt="Símbolo Papotato" />
             <span className="orbit-note n1">
               <Headphones size={19} /> Só mais uma partida?
             </span>
@@ -146,7 +146,7 @@ function Auth({ onLogin }) {
       </div>
       <section className="auth-card">
         <span className="eyebrow">BOM TER VOCÊ POR AQUI</span>
-        <h2>{register ? 'Sua roda começa aqui.' : 'Pode chegar.'}</h2>
+        <h2>{register ? 'Seu papo começa aqui.' : 'Pode chegar.'}</h2>
         <p>
           {register
             ? 'Crie sua conta e convide quem faz parte.'
@@ -206,7 +206,7 @@ function Auth({ onLogin }) {
             </p>
           )}
           <button className="primary" disabled={busy}>
-            {busy ? 'Só um instante…' : register ? 'Criar minha conta' : 'Entrar na Roda'}
+            {busy ? 'Só um instante…' : register ? 'Criar minha conta' : 'Entrar no Papotato'}
             <ArrowRight size={18} />
           </button>
         </form>
@@ -376,7 +376,9 @@ function App() {
         Notification.permission === 'granted' &&
         localStorage.getItem('roda-notifications') === 'true'
       )
-        new Notification('Nova mensagem na Roda', { body: m.display + ' enviou uma mensagem.' });
+        new Notification('Nova mensagem no Papotato', {
+          body: m.display + ' enviou uma mensagem.',
+        });
     });
     s.on('refresh', () => attempt(() => refreshMessages()));
     s.on('typing', (v) => {
@@ -520,7 +522,7 @@ function App() {
     return (
       <div className="loading">
         <img src="/logo.svg" alt="" />
-        Abrindo a roda…
+        Preparando o papo…
       </div>
     );
   if (!user) return <Auth onLogin={setUser} />;
@@ -547,7 +549,7 @@ function App() {
             setModal('welcome');
           }}
         >
-          <img src="/logo.svg" alt="Roda" />
+          <img src="/logo.svg" alt="Papotato" />
         </button>
         <div className="rail-divider" />
         {spaces.map((s) => (
@@ -689,7 +691,7 @@ function App() {
             <Menu size={20} />
           </IconButton>
           <Hash className="muted" size={24} />
-          <strong>{selected?.name || 'Bem-vindo à Roda'}</strong>
+          <strong>{selected?.name || 'Bem-vindo ao Papotato'}</strong>
           <span className="topbar-description">
             {currentSpace?.description || 'Seu cantinho para ficar perto.'}
           </span>
@@ -1040,7 +1042,7 @@ function App() {
                   settings: 'Do seu jeito',
                   friends: 'Seus amigos',
                   members: 'Gente da roda',
-                  welcome: 'Bem-vindo à Roda',
+                  welcome: 'Bem-vindo ao Papotato',
                 }[modal]
           }
           onClose={() => {
@@ -1434,8 +1436,8 @@ function App() {
           {modal === 'welcome' && (
             <>
               <p>
-                A Roda é seu lugar para reunir os amigos. Crie uma comunidade, compartilhe o convite
-                e entre na mesma sala de voz.
+                O Papotato é seu lugar para reunir os amigos. Crie uma comunidade, compartilhe o
+                convite e entre na mesma sala de voz.
               </p>
               <p className="muted">
                 A mídia usa LiveKit com criptografia de transporte; não há criptografia ponta a

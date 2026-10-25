@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === 'production') {
 const server = createServer(app);
 const io = attach(server);
 const port = Number(process.env.PORT || 3000);
-server.listen(port, '0.0.0.0', () => console.log(`Roda: http://localhost:${port}`));
+server.listen(port, '0.0.0.0', () => console.log(`Papotato: http://localhost:${port}`));
 for (const signal of ['SIGTERM', 'SIGINT'])
   process.on(signal, () => {
     io.close();

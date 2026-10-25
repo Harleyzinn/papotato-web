@@ -1,6 +1,6 @@
-# Roda
+# Papotato
 
-Comunicação entre amigos, em português: texto persistente, comunidades e chamadas com uma SFU LiveKit real. Identidade própria em verde menta, símbolo de conversa circular e temas Jardim à noite, Luz da manhã e Ameixa. Sem contas ou conversas pré-carregadas.
+**Papotato = papo + potato.** Comunicação entre amigos, em português: texto persistente, comunidades e chamadas com uma SFU LiveKit real. Identidade própria em verde menta, símbolo de batata em forma de conversa e temas Jardim à noite, Luz da manhã e Ameixa. Sem contas ou conversas pré-carregadas.
 
 **Estado:** implementação funcional local com testes de API e transporte de mídia. Não publicada em um domínio. Não foi validada entre redes diferentes. O escopo completo solicitado ainda tem pendências, listadas em [docs/STATUS.md](docs/STATUS.md).
 
