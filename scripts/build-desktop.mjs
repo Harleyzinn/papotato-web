@@ -3,6 +3,15 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { build } from 'esbuild';
 await build({
+  entryPoints: ['desktop/updates-entry.cjs'],
+  outfile: 'desktop/updates.cjs',
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node24',
+  external: ['electron'],
+});
+await build({
   entryPoints: ['server/firebase-media.js'],
   outfile: 'desktop/media-broker.cjs',
   bundle: true,

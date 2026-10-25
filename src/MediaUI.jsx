@@ -41,6 +41,7 @@ function CallStatus() {
 export default function MediaUI({
   prejoin,
   setPrejoin,
+  joiningCall,
   user,
   startCall,
   report,
@@ -60,21 +61,29 @@ export default function MediaUI({
             Teste seu microfone e câmera. Os dispositivos só serão acessados ao ativar os controles
             abaixo.
           </p>
-          <PreJoin
-            defaults={{ username: user.display, audioEnabled: false, videoEnabled: false }}
-            persistUserChoices={false}
-            onSubmit={startCall}
-            onError={(e) =>
-              report(new Error('Não foi possível acessar o dispositivo: ' + e.message))
-            }
-            joinLabel="Entrar na chamada"
-            micLabel="Microfone"
-            camLabel="Câmera"
-            userLabel="Seu nome"
-          />
+          {joiningCall ? (
+            <div className="banner notice" role="status">
+              Conectando ao servidor de chamadas… O Render gratuito pode levar até 90 segundos para
+              despertar. Você pode cancelar fechando esta janela.
+            </div>
+          ) : (
+            <PreJoin
+              defaults={{ username: user.display, audioEnabled: false, videoEnabled: false }}
+              persistUserChoices={false}
+              onSubmit={startCall}
+              onError={(e) =>
+                report(new Error('Não foi possível acessar o dispositivo: ' + e.message))
+              }
+              joinLabel="Entrar na chamada"
+              micLabel="Microfone"
+              camLabel="Câmera"
+              userLabel="Seu nome"
+            />
+          )}
           <p className="muted">
-            Compartilhar áudio depende do navegador e da superfície escolhida. No Chrome/Edge, uma
-            aba costuma oferecer a opção “Compartilhar áudio”.
+            {IS_DESKTOP
+              ? 'Ao compartilhar a tela no Windows, escolha a janela ou monitor no seletor do Papotato. O áudio do sistema é opcional.'
+              : 'Compartilhar áudio depende do navegador e da superfície escolhida. No Chrome/Edge, uma aba costuma oferecer a opção “Compartilhar áudio”.'}
           </p>
         </Modal>
       )}

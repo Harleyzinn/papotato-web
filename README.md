@@ -1,6 +1,6 @@
 # Papotato
 
-**Versão instalada 0.4.1 para Windows:** [baixar instalador](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.4.1). Firebase compartilhado e emissor de chamadas Render Free já configurados, com escolha de hospedagem local exclusiva do computador proprietário. [Configuração e limites reais](docs/DESKTOP_FIREBASE.md). Essa versão não depende do Railway para texto; o perfil web 0.3 abaixo permanece separado.
+**Versão instalada 0.5.0 para Windows:** [baixar instalador](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.5.0). Atualizações automáticas, Firebase compartilhado e emissor de chamadas Render Free configurados, com escolha de hospedagem local exclusiva do computador proprietário. Quem usa a 0.4.x deve instalar esta versão uma vez para habilitar o atualizador. [Configuração e limites reais](docs/DESKTOP_FIREBASE.md). Essa versão não depende do Railway para texto; o perfil web 0.3 abaixo permanece separado.
 
 **Versão 0.3: somente planos gratuitos, sem cartão ou upgrade automático.** O perfil econômico tem 4 pessoas por chamada, anexos de 2 MiB e cotas reais no servidor. A implantação externa permanece pendente de conectar contas **Railway Free + LiveKit Build**, sem contratar serviço pago. Consulte primeiro [docs/FREE_ONLY.md](docs/FREE_ONLY.md).
 

@@ -256,6 +256,7 @@ function App() {
     [friends, setFriends] = useState([]),
     [call, setCall] = useState(null),
     [prejoin, setPrejoin] = useState(null),
+    [joiningCall, setJoiningCall] = useState(false),
     [callMin, setCallMin] = useState(false),
     [connected, setConnected] = useState(false),
     [mobile, setMobile] = useState(false),
@@ -267,6 +268,8 @@ function App() {
       localStorage.getItem('roda-notifications') === 'true',
     );
   const pendingDraft = useRef(null),
+    callRequest = useRef(0),
+    callPending = useRef(false),
     socket = useRef(null),
     channelRef = useRef(null),
     end = useRef(null),
@@ -515,14 +518,38 @@ function App() {
     });
   }
   async function startCall(choices) {
-    await attempt(async () => {
-      const config = await api('/channels/' + prejoin.id + '/token', 'POST');
-      setCall({ ...config, choices, channel: prejoin });
-      setPrejoin(null);
-      setCallMin(false);
-    });
+    if (callPending.current || !prejoin) return;
+    callPending.current = true;
+    setJoiningCall(true);
+    const request = ++callRequest.current,
+      target = prejoin,
+      uid = user.id;
+    try {
+      await attempt(async () => {
+        const config = await api('/channels/' + target.id + '/token', 'POST');
+        if (request !== callRequest.current || userRef.current?.id !== uid) return;
+        setCall({ ...config, choices, channel: target });
+        setPrejoin(null);
+        setCallMin(false);
+      });
+    } finally {
+      if (request === callRequest.current) {
+        callPending.current = false;
+        setJoiningCall(false);
+      }
+    }
   }
+  function cancelPrejoin() {
+    callRequest.current++;
+    callPending.current = false;
+    setJoiningCall(false);
+    setPrejoin(null);
+  }
+  useEffect(() => {
+    if (IS_DESKTOP) window.papotatoDesktop.setCallActive(!!call);
+  }, [call]);
   async function logout() {
+    cancelPrejoin();
     await attempt(async () => {
       await api('/auth/logout', 'POST');
       clearToken();
@@ -1476,7 +1503,10 @@ function App() {
               </p>
               <p className="muted">
                 A mídia usa LiveKit com criptografia de transporte; não há criptografia ponta a
-                ponta. {IS_DESKTOP ? 'O histórico fica no Firebase. A capacidade das chamadas depende do serviço LiveKit.' : 'O histórico fica no servidor da comunidade. Máximo configurado: 4 participantes por chamada.'}
+                ponta.{' '}
+                {IS_DESKTOP
+                  ? 'O histórico fica no Firebase. A capacidade das chamadas depende do serviço LiveKit.'
+                  : 'O histórico fica no servidor da comunidade. Máximo configurado: 4 participantes por chamada.'}
               </p>
               <button className="primary" onClick={() => setModal('create')}>
                 Criar uma comunidade
@@ -1609,7 +1639,8 @@ function App() {
           <MediaUI
             {...{
               prejoin,
-              setPrejoin,
+              setPrejoin: cancelPrejoin,
+              joiningCall,
               user,
               startCall,
               report,

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { asset, api } from './client.js';
+import DesktopUpdates from './DesktopUpdates.jsx';
 export function DesktopInfo() {
   const [files, setFiles] = useState([]),
     [error, setError] = useState(''),
@@ -20,6 +21,9 @@ export function DesktopInfo() {
         planos das contas.
       </p>
       <div className="button-row">
+        <button className="secondary" onClick={() => window.papotatoDesktop.checkUpdates()}>
+          Buscar atualizações
+        </button>
         <button
           className="secondary"
           onClick={() => window.dispatchEvent(new Event('papotato:connection'))}
@@ -169,6 +173,7 @@ export default function DesktopGate({ children }) {
     );
   return (
     <>
+      <DesktopUpdates />
       {children}
       {editing && (
         <div className="extras-backdrop">

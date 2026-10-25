@@ -4,12 +4,24 @@ A versão 0.4 inclui a interface no instalador Electron e usa Firebase Authentic
 
 ## Começar
 
-1. Baixe [Papotato-Setup-0.4.1.exe](https://github.com/Harleyzinn/papotato-web/releases/download/desktop-v0.4.1/Papotato-Setup-0.4.1.exe) e instale no Windows 10/11 x64. O hash está na [página da release](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.4.1).
+1. Baixe [Papotato-Setup-0.5.0.exe](https://github.com/Harleyzinn/papotato-web/releases/download/desktop-v0.5.0/Papotato-Setup-0.5.0.exe) e instale no Windows 10/11 x64. O hash está na [página da release](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.5.0).
 2. Crie sua conta, crie uma comunidade e copie o código de convite. Seus amigos instalam o mesmo programa, criam suas contas e entram pelo código.
 3. Texto, convites, canais privados, amigos, moderação e arquivos usam o banco compartilhado. Não há usuários ou mensagens de demonstração.
 4. Entre em um canal de voz para testar os dispositivos e, depois, conectar a chamada.
 
 O instalador ainda não tem certificado de assinatura de código. O Windows pode mostrar o editor como desconhecido. Não altere configurações de segurança do Windows para instalar. O arquivo pode ser conferido pelo SHA-256 publicado junto à release.
+
+## Atualizações automáticas a partir da versão 0.5.0
+
+**Quem está na 0.4.x precisa instalar a 0.5.0 uma vez**, pois as versões anteriores não têm atualizador. A conta, o histórico Firebase, o perfil local e a chave do anfitrião são preservados.
+
+O aplicativo procura releases estáveis ao abrir (após 20 segundos) e a cada seis horas. Uma atualização disponível é baixada em segundo plano pelo `electron-updater`, a partir do repositório público GitHub, com verificação SHA-512 do pacote. Não há token GitHub dentro do instalador. O aviso mostra o progresso e oferece **Reiniciar e instalar** quando o download está pronto. O programa só instala após a confirmação; sair do aplicativo não instala automaticamente. Uma chamada ativa impede reiniciar para atualizar. Se o PC estiver hospedando, a confirmação também informa que a hospedagem será interrompida durante o reinício.
+
+Use **Ajuda → Verificar atualizações** ou o botão nas configurações para verificar manualmente. Falhas de internet não bloqueiam o chat e permitem tentar novamente. O pacote continua sem assinatura de editor; a atualização usa HTTPS e os hashes dos artefatos publicados, sem afirmar que existe assinatura de código.
+
+Para publicar versões futuras: atualize `package.json` e `desktop/package.json`, faça commit/push, crie a tag `desktop-vVERSAO` e envie a tag. O workflow `desktop.yml` testa, gera NSIS, `.blockmap`, `latest.yml` e `SHA256SUMS.txt`, envia todos os arquivos e só publica a release ao terminar. Esses arquivos devem permanecer juntos na release marcada como mais recente. O aplicativo lê o feed gerado pelo builder em `resources/app-update.yml`. Não distribua apenas o `.exe` sem `latest.yml` e o blockmap nas futuras releases.
+
+Na 0.5.0, a verificação do LiveKit também consulta a configuração compartilhada no Firebase, corrigindo o bloqueio em instalações cujo arquivo local antigo não tinha URL de mídia. A espera pelo Render mostra andamento, evita entradas duplicadas e descarta uma conexão se o usuário cancelar a janela antes de o token chegar.
 
 ## Hospedar no computador do proprietário
 

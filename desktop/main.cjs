@@ -14,7 +14,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 // Keep the same protected Windows storage in development and in the installed app.
-app.setPath('userData',path.join(app.getPath('appData'),'papotato-desktop'));
+app.setPath('userData', path.join(app.getPath('appData'), 'papotato-desktop'));
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'papotato',
@@ -138,7 +138,9 @@ if (!app.requestSingleInstanceLock()) {
         webSecurity: true,
       },
     });
-    require('./hosting.cjs').register(ipcMain, trusted);
+    const hosting = require('./hosting.cjs');
+    hosting.register(ipcMain, trusted);
+    const updates = require('./updates.cjs').register(ipcMain, trusted, () => mainWindow, hosting);
     const ses = mainWindow.webContents.session;
     ses.setPermissionRequestHandler(async (contents, permission, callback) => {
       if (contents !== mainWindow?.webContents || !contents.getURL().startsWith('papotato://app/'))
@@ -279,6 +281,7 @@ if (!app.requestSingleInstanceLock()) {
         {
           label: 'Ajuda',
           submenu: [
+            { label: 'Verificar atualizações', click: () => updates.check(true) },
             {
               label: 'Instruções',
               click: () =>

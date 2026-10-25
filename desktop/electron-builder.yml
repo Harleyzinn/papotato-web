@@ -16,6 +16,7 @@ files:
   - hosting.cjs
   - media-broker.cjs
   - cloudflared.json
+  - updates.cjs
   - '!node_modules/**'
 beforeBuild: desktop/before-build.cjs
 win:
@@ -33,3 +34,8 @@ nsis:
   installerIcon: desktop/assets/icon.ico
   uninstallerIcon: desktop/assets/icon.ico
 artifactName: Papotato-Setup-${version}.${ext}
+publish:
+  provider: github
+  owner: Harleyzinn
+  repo: papotato-web
+  releaseType: release

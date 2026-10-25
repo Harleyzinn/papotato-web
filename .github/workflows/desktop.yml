@@ -32,7 +32,43 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run desktop:dist
+      - run: node scripts/release-checksums.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: Papotato-Windows
-          path: release/Papotato-Setup-*.exe
+          path: |
+            release/Papotato-Setup-*.exe
+            release/Papotato-Setup-*.exe.blockmap
+            release/latest.yml
+            release/SHA256SUMS.txt
+  publish:
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Papotato-Windows
+          path: release
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const tag = context.ref.replace('refs/tags/', '');
+            let release;
+            try {
+              release = (await github.rest.repos.getReleaseByTag({...context.repo, tag})).data;
+              if (!release.draft && release.assets.length) {
+                core.notice('Release already published; preserving existing assets.');
+                return;
+              }
+            } catch (error) { if (error.status !== 404) throw error; }
+            if (!release) release = (await github.rest.repos.createRelease({...context.repo, tag_name: tag, name: `Papotato ${tag.replace('desktop-v','')}`, draft: true, generate_release_notes: true})).data;
+            const files = fs.readdirSync('release');
+            if (!files.includes('latest.yml') || !files.some(f=>f.endsWith('.exe')) || !files.some(f=>f.endsWith('.blockmap'))) throw Error('Updater artifacts missing.');
+            for (const name of files) {
+              if (!release.assets.some(a=>a.name===name)) await github.rest.repos.uploadReleaseAsset({...context.repo, release_id:release.id, name, data:fs.readFileSync('release/'+name)});
+            }
+            await github.rest.repos.updateRelease({...context.repo, release_id:release.id, draft:false, make_latest:'true'});

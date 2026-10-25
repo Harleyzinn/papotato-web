@@ -60,6 +60,7 @@ test('Firebase real emulado: contas, convites atômicos, acesso, chat e arquivos
   await assert.rejects(e.api('/hosting','PATCH',{desktopUrl:'https://host-test.trycloudflare.com/token',enabled:true,mode:'pc'}),/Acesso negado/);
   await a.api('/hosting','PATCH',{desktopUrl:'https://host-test.trycloudflare.com/token',enabled:true,mode:'pc'});
   assert.equal((await b.api('/hosting')).mode,'pc');
+  assert.equal((await b.api('/health')).mediaConfigured,true,'A configuração compartilhada deve habilitar chamadas sem URL local');
   await assertFails(updateDoc(doc(b.db,'infrastructure','owner'),{uid:people[1].id}));
   await assert.rejects(a.api('/hosting','PATCH',{desktopUrl:'http://attacker.invalid/token',enabled:true,mode:'pc'}),/Acesso negado/);
   const sid = (

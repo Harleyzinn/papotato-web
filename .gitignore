@@ -13,3 +13,4 @@ ui-debug.log
 *.firebase.local.json
 .firebase/
 desktop/media-broker.cjs
+desktop/updates.cjs
