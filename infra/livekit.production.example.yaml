@@ -1,0 +1,20 @@
+# Linux VM with host networking. Substitute domains and absolute certificate paths.
+# Generate certificates using ACME DNS challenge or the official LiveKit deployment generator.
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
+  stun_servers:
+    - stun.l.google.com:19302
+turn:
+  enabled: true
+  domain: turn.example.com
+  tls_port: 5349
+  udp_port: 3478
+  cert_file: /certs/turn/fullchain.pem
+  key_file: /certs/turn/privkey.pem
+room:
+  max_participants: 8
+# Set LIVEKIT_KEYS in the service environment; never commit production keys.

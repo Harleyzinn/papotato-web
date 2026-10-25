@@ -1,0 +1,7 @@
+roda.example.com {
+  reverse_proxy 127.0.0.1:3000
+}
+media.example.com {
+  reverse_proxy 127.0.0.1:7880
+}
+# TURN TLS is terminated by LiveKit at turn.example.com:5349, not by this HTTP proxy.
