@@ -4,7 +4,7 @@ A versão 0.4 inclui a interface no instalador Electron e usa Firebase Authentic
 
 ## Começar
 
-1. Baixe `Papotato-Setup-0.4.0.exe` na página de Releases e instale no Windows 10/11 x64.
+1. Baixe [Papotato-Setup-0.4.0.exe](https://github.com/Harleyzinn/papotato-web/releases/download/desktop-v0.4.0/Papotato-Setup-0.4.0.exe) e instale no Windows 10/11 x64. O hash está na [página da release](https://github.com/Harleyzinn/papotato-web/releases/tag/desktop-v0.4.0).
 2. Crie sua conta, crie uma comunidade e copie o código de convite. Seus amigos instalam o mesmo programa, criam suas contas e entram pelo código.
 3. Texto, convites, canais privados, amigos, moderação e arquivos usam o banco compartilhado. Não há usuários ou mensagens de demonstração.
 4. Entre em um canal de voz para testar os dispositivos e, depois, conectar a chamada.
