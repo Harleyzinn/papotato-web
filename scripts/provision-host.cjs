@@ -2,6 +2,7 @@
 const { app, safeStorage } = require('electron');
 const fs = require('node:fs'),
   path = require('node:path');
+app.setPath('userData',path.join(app.getPath('appData'),'papotato-desktop'));
 app.whenReady().then(() => {
   try {
     if (!safeStorage.isEncryptionAvailable())

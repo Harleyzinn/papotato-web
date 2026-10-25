@@ -13,6 +13,8 @@ const {
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
+// Keep the same protected Windows storage in development and in the installed app.
+app.setPath('userData',path.join(app.getPath('appData'),'papotato-desktop'));
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'papotato',
