@@ -1,5 +1,7 @@
 # Papotato
 
+**Versão 0.3: somente planos gratuitos, sem cartão ou upgrade automático.** O perfil econômico tem 4 pessoas por chamada, anexos de 2 MiB e cotas reais no servidor. A implantação externa permanece pendente de conectar contas **Railway Free + LiveKit Build**, sem contratar serviço pago. Consulte primeiro [docs/FREE_ONLY.md](docs/FREE_ONLY.md).
+
 **Papotato = papo + potato.** Comunicação entre amigos, em português: texto persistente, comunidades e chamadas com uma SFU LiveKit real. Identidade própria em dourado batata e ardósia, símbolo de batata em forma de conversa e três temas. Sem contas ou conversas pré-carregadas.
 
 **Versão 0.2:** frontend preparado para [GitHub Pages](https://harleyzinn.github.io/papotato-web/), com build em subdiretório, deploy automático e API em domínio separado. **API e SFU públicas ainda precisam ser provisionadas**: sem elas, a publicação exibe uma tela explícita de configuração pendente e não permite simular conversas. Veja [como concluir a configuração](docs/GITHUB_PAGES.md) e os [limites e testes](docs/STATUS.md). Não houve validação entre redes diferentes.
@@ -79,9 +81,9 @@ As escolhas de mídia seguem a [documentação de implantação e portas do Live
 
 ## Limites e privacidade
 
-- **8 participantes por chamada**, imposto pela SFU. Teste realizado com 2; capacidade para 8 não foi submetida a carga.
-- Câmera com alvo 720p/30 fps, limite de encoding 1,5 Mbps. Tela 480p/720p/1080p selecionável, 15 fps e limite de encoding 2,5 Mbps. Simulcast, dynacast e adaptação de assinatura habilitados. São alvos, sujeitos a hardware/rede.
-- Até 4.000 caracteres por mensagem; páginas de 50 mensagens. Anexos até 8 MiB, total de 100 MiB por conta. Armazenamento compartilhado não possui quota global.
+- **4 participantes por chamada**, imposto pela SFU. Teste realizado com 2; quatro streams simultâneos não foram submetidos a carga.
+- Câmera com alvo 480p/15 fps e encoding de até 500 kbps. Tela 480p/720p, 10 fps e encoding de até 900 kbps. Simulcast, dynacast e adaptação habilitados. São alvos, sujeitos a hardware/rede, não controle de faturamento do provedor.
+- Até 4.000 caracteres por mensagem, páginas de 50 e 20.000 mensagens no total. Anexos até 2 MiB, 16 MiB por conta e 64 MiB na instalação. Downloads de anexos limitados a 256 MiB por mês UTC. Veja todas as cotas em [FREE_ONLY.md](docs/FREE_ONLY.md).
 - 240 operações API/minuto/IP; autenticação limitada a 30 operações/15 min/IP; no máximo 10 mensagens/10 s/usuário. Convites: 1–168 horas e 1–100 usos.
 - Áudio da tela depende do navegador, sistema e fonte selecionada. Não há gravação, atalhos globais ou promessa de E2EE.
 - HTTPS/WSS + DTLS-SRTP protegem o transporte em produção. Administrador do servidor e infraestrutura de mídia continuam em posição de acessar dados. Histórico e anexos não são cifrados no banco.

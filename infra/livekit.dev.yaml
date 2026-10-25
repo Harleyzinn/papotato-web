@@ -5,4 +5,4 @@ rtc:
   port_range_end: 50100
   use_external_ip: false
 room:
-  max_participants: 8
+  max_participants: 4

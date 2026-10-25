@@ -1,5 +1,7 @@
 # Papotato no GitHub Pages
 
+**Política atual: somente gratuito.** Siga [FREE_ONLY.md](FREE_ONLY.md) e `.env.free.example`. Use Railway **Free** e LiveKit **Build**, sem cartão. Não escolha plano pago para contornar qualquer limite; as instruções de infraestrutura abaixo continuam como referência técnica.
+
 O Pages entrega o frontend estático. Contas, banco, mensagens, anexos e chamadas dependem dos serviços externos abaixo. Publicar o HTML não os cria. Sem `VITE_API_URL`, o site mostra explicitamente que o servidor compartilhado ainda precisa ser configurado.
 
 Repositório web: [Harleyzinn/papotato-web](https://github.com/Harleyzinn/papotato-web). **Frontend publicado e verificado em 25/10/2026:** [harleyzinn.github.io/papotato-web](https://harleyzinn.github.io/papotato-web/). HTTP 200 e scripts/CSS/favicon confirmados, com [deploy aprovado](https://github.com/Harleyzinn/papotato-web/actions/runs/40221144047). A página ainda informa configuração pendente: API/SFU públicas não estão provisionadas.

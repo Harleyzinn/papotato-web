@@ -5,7 +5,7 @@ import {
   useConnectionState,
   useRoomContext,
 } from '@livekit/components-react';
-import { VideoPresets } from 'livekit-client';
+
 import { Headphones, X } from 'lucide-react';
 import VideoConference from './CallView.jsx';
 import '@livekit/components-styles';
@@ -86,7 +86,9 @@ export default function MediaUI({
             <div>
               <span className="status-dot" />
               <strong>{call.channel.name}</strong>
-              <small>Até 8 pessoas · transporte criptografado</small>
+              <small>
+                Até {call.limits?.participantsPerCall || 4} pessoas · transporte criptografado
+              </small>
             </div>
             <button onClick={() => setCallMin(!callMin)}>
               {callMin ? 'Ampliar chamada' : 'Minimizar'}
@@ -104,11 +106,23 @@ export default function MediaUI({
             options={{
               adaptiveStream: true,
               dynacast: true,
-              videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+              videoCaptureDefaults: {
+                resolution: {
+                  width: 854,
+                  height: call.limits?.cameraHeight || 480,
+                  frameRate: call.limits?.cameraFrameRate || 15,
+                },
+              },
               publishDefaults: {
                 simulcast: true,
-                videoEncoding: { maxBitrate: 1500000, maxFramerate: 30 },
-                screenShareEncoding: { maxBitrate: 2500000, maxFramerate: 15 },
+                videoEncoding: {
+                  maxBitrate: call.limits?.cameraBitrate || 500000,
+                  maxFramerate: call.limits?.cameraFrameRate || 15,
+                },
+                screenShareEncoding: {
+                  maxBitrate: call.limits?.screenBitrate || 900000,
+                  maxFramerate: call.limits?.screenFrameRate || 10,
+                },
               },
             }}
             onDisconnected={() => setCall(null)}
@@ -125,7 +139,7 @@ export default function MediaUI({
             data-lk-theme="default"
           >
             <CallStatus />
-            <VideoConference />
+            <VideoConference limits={call.limits} />
           </LiveKitRoom>
         </section>
       )}

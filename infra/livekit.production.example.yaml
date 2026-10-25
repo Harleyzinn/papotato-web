@@ -16,5 +16,5 @@ turn:
   cert_file: /certs/turn/fullchain.pem
   key_file: /certs/turn/privkey.pem
 room:
-  max_participants: 8
+  max_participants: 4
 # Set LIVEKIT_KEYS in the service environment; never commit production keys.

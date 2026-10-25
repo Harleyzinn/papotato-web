@@ -11,7 +11,7 @@ import {
   StartAudio,
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
-export default function CallView() {
+export default function CallView({ limits }) {
   const room = useRoomContext(),
     participants = useParticipants(),
     tracks = useTracks([
@@ -19,7 +19,7 @@ export default function CallView() {
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ]);
   const [focused, setFocused] = useState(''),
-    [quality, setQuality] = useState('720'),
+    [quality, setQuality] = useState('480'),
     [error, setError] = useState(''),
     [stats, setStats] = useState({}),
     [screen, setScreen] = useState(false);
@@ -119,7 +119,7 @@ export default function CallView() {
             resolution: {
               width: quality === '1080' ? 1920 : quality === '720' ? 1280 : 854,
               height: Number(quality),
-              frameRate: 15,
+              frameRate: limits?.screenFrameRate || 10,
             },
           }}
           onDeviceError={(e) => setError('Não foi possível compartilhar: ' + e.message)}
@@ -134,7 +134,6 @@ export default function CallView() {
         >
           <option value="480">Tela 480p</option>
           <option value="720">Tela 720p</option>
-          <option value="1080">Tela 1080p</option>
         </select>
         <button
           className="lk-button"

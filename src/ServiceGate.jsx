@@ -16,6 +16,8 @@ export default function ServiceGate({ children }) {
       const h = await api('/health');
       if (h.app !== 'papotato')
         throw new Error('Este endereço não é um servidor Papotato compatível.');
+      if (h.costPolicy?.mode !== 'free-only')
+        throw new Error('A API precisa ser atualizada para o perfil gratuito do Papotato.');
       setState('ready');
     } catch (e) {
       setMessage(e.message);
@@ -42,7 +44,7 @@ export default function ServiceGate({ children }) {
         </h1>
         <p>
           {state === 'setup'
-            ? 'O frontend está no ar. Contas, mensagens e chamadas precisam de uma API pública com banco persistente e de uma SFU LiveKit. Essa conexão ainda não foi configurada.'
+            ? 'O frontend é gratuito. Para conversar de verdade, falta conectar a API em uma conta Railway Free e a mídia em um projeto LiveKit Build, sem cartão. Há franquias de uso; a configuração dessas contas ainda está pendente.'
             : state === 'offline'
               ? message
               : 'Verificando a conexão com o servidor Papotato.'}
@@ -60,11 +62,11 @@ export default function ServiceGate({ children }) {
         {state === 'setup' ? (
           <a
             className="primary"
-            href="https://github.com/Harleyzinn/papotato-web/blob/main/docs/GITHUB_PAGES.md"
+            href="https://github.com/Harleyzinn/papotato-web/blob/main/docs/FREE_ONLY.md"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Configurar o serviço compartilhado
+            Configurar os serviços gratuitos
             <ArrowRight size={18} />
           </a>
         ) : (

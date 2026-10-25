@@ -6,7 +6,7 @@ import { Paperclip, Shield, X, MessagesSquare } from 'lucide-react';
 export function UploadButton({ channel, onUploaded, onError }) {
   const [busy, setBusy] = useState(false);
   return (
-    <label className="upload-button" title="Anexar arquivo (até 8 MiB)">
+    <label className="upload-button" title="Anexar arquivo (até 2 MiB)">
       <Paperclip size={20} />
       <span className="sr-only">Anexar arquivo</span>
       <input
@@ -16,8 +16,8 @@ export function UploadButton({ channel, onUploaded, onError }) {
           const input = e.currentTarget;
           const file = input.files?.[0];
           if (!file) return;
-          if (file.size > 8 * 1024 * 1024) {
-            onError(new Error('O limite por arquivo é 8 MiB.'));
+          if (file.size > 2 * 1024 * 1024) {
+            onError(new Error('O limite gratuito por arquivo é 2 MiB.'));
             input.value = '';
             return;
           }

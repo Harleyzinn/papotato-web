@@ -87,6 +87,17 @@ try {
       .body;
     await rooms[i].connect(url, token, { autoSubscribe: true });
   }
+  const service = new RoomServiceClient(
+    process.env.LIVEKIT_URL.replace(/^ws/, 'http'),
+    process.env.LIVEKIT_API_KEY,
+    process.env.LIVEKIT_API_SECRET,
+  );
+  const configuredRoom = (await service.listRooms([channel]))[0];
+  assert.equal(
+    configuredRoom.maxParticipants,
+    4,
+    'A SFU deve impor o limite gratuito de quatro pessoas.',
+  );
   const audioSources = [];
   const videoSources = [];
   for (let i = 0; i < 2; i++) {

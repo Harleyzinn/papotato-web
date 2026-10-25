@@ -13,4 +13,4 @@ COPY --from=build /app/dist ./dist
 COPY server ./server
 USER node
 EXPOSE 3000
-CMD ["node","server/bootstrap.js"]
+CMD ["node","--max-old-space-size=192","server/bootstrap.js"]

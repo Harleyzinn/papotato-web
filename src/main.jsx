@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { api, API_BASE, APP_BASE, asset, clearToken, getToken } from './client.js';
 import ServiceGate from './ServiceGate.jsx';
+import UsagePanel from './UsagePanel.jsx';
 const MediaUI = lazy(() => import('./MediaUI.jsx'));
 import { createRoot } from 'react-dom/client';
 import { io } from 'socket.io-client';
@@ -1216,6 +1217,7 @@ function App() {
           )}
           {modal === 'settings' && (
             <div className="settings">
+              <UsagePanel />
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1439,7 +1441,7 @@ function App() {
               </p>
               <p className="muted">
                 A mídia usa LiveKit com criptografia de transporte; não há criptografia ponta a
-                ponta. O histórico fica no servidor da comunidade. Máximo configurado: 8
+                ponta. O histórico fica no servidor da comunidade. Máximo configurado: 4
                 participantes por chamada.
               </p>
               <button className="primary" onClick={() => setModal('create')}>

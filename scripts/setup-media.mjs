@@ -55,7 +55,7 @@ const vars = Object.fromEntries(
 );
 await writeFile(
   'data/livekit-local.yaml',
-  `port: 7880\nbind_addresses: ["127.0.0.1"]\nrtc:\n  tcp_port: 7881\n  port_range_start: 50000\n  port_range_end: 50100\n  use_external_ip: false\nkeys:\n  ${vars.LIVEKIT_API_KEY}: ${vars.LIVEKIT_API_SECRET}\nroom:\n  max_participants: 8\n`,
+  `port: 7880\nbind_addresses: ["127.0.0.1"]\nrtc:\n  tcp_port: 7881\n  port_range_start: 50000\n  port_range_end: 50100\n  use_external_ip: false\nkeys:\n  ${vars.LIVEKIT_API_KEY}: ${vars.LIVEKIT_API_SECRET}\nroom:\n  max_participants: 4\n`,
 );
 console.log(
   'LiveKit verificado e preparado. Execute .tools/livekit/livekit-server.exe --config data/livekit-local.yaml --dev',

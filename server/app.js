@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { z } from 'zod';
 import { openDatabase } from './db.js';
+import { FREE_LIMITS, COST_POLICY, currentPeriod } from './limits.js';
 
 const digest = (v) => createHash('sha256').update(v).digest('hex');
 const id = () => randomUUID();
@@ -30,6 +31,9 @@ export function createApp({
   const get = (sql, ...args) => db.prepare(sql).get(...args);
   const all = (sql, ...args) => db.prepare(sql).all(...args);
   const run = (sql, ...args) => db.prepare(sql).run(...args);
+  const quota = (count, limit, message) => {
+    if (count >= limit) fail(429, message);
+  };
   const transaction = (fn) => {
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -225,7 +229,7 @@ export function createApp({
     () => ({
       ok: true,
       app: 'papotato',
-      version: '0.2.0',
+      version: '0.3.0',
       database: !!get('SELECT 1'),
       mediaConfigured: !!(
         process.env.LIVEKIT_URL &&
@@ -233,6 +237,8 @@ export function createApp({
         process.env.LIVEKIT_API_SECRET
       ),
       emailConfigured: false,
+      costPolicy: COST_POLICY,
+      limits: FREE_LIMITS,
     }),
     false,
   );
@@ -250,6 +256,11 @@ export function createApp({
         .parse(req.body);
       const salt = randomBytes(16).toString('hex'),
         uid = id();
+      quota(
+        get('SELECT count(*) AS n FROM users').n,
+        FREE_LIMITS.users,
+        'Esta instalação gratuita atingiu o limite de contas.',
+      );
       if (
         get('SELECT id FROM users WHERE email=? OR username=?', b.email.toLowerCase(), b.username)
       )
@@ -321,6 +332,11 @@ export function createApp({
   );
   route('post', '/spaces', (req) =>
     transaction(() => {
+      quota(
+        get('SELECT count(*) AS n FROM spaces').n,
+        FREE_LIMITS.spaces,
+        'Limite de comunidades e conversas privadas desta instalação gratuita atingido.',
+      );
       const b = z
         .object({ name: text(60), description: z.string().max(300).default('') })
         .parse(req.body);
@@ -359,6 +375,11 @@ export function createApp({
   });
   route('post', '/spaces/:id/channels', (req) => {
     admin(req.params.id, req.user.id);
+    quota(
+      get('SELECT count(*) AS n FROM channels WHERE space_id=?', req.params.id).n,
+      FREE_LIMITS.channelsPerSpace,
+      'Limite de canais desta comunidade atingido.',
+    );
     const b = z
       .object({
         name: text(60),
@@ -482,6 +503,11 @@ export function createApp({
         fail(409, 'Identificador em uso.');
       return existing;
     }
+    quota(
+      get('SELECT count(*) AS n FROM messages').n,
+      FREE_LIMITS.messages,
+      'O histórico atingiu o limite desta instalação gratuita. Nenhuma mensagem foi apagada.',
+    );
     if (b.reply_id && !get('SELECT 1 FROM messages WHERE id=? AND channel_id=?', b.reply_id, c.id))
       fail(400, 'Resposta inválida.');
     if (
@@ -597,6 +623,11 @@ export function createApp({
         key,
       );
       if (existing) return { id: existing.space_id };
+      quota(
+        get('SELECT count(*) AS n FROM spaces').n,
+        FREE_LIMITS.spaces,
+        'Limite de comunidades e conversas privadas desta instalação gratuita atingido.',
+      );
       const sid = id(),
         names = ids
           .map((uid) => get('SELECT display FROM users WHERE id=?', uid).display)
@@ -643,7 +674,7 @@ export function createApp({
   app.post(
     '/api/channels/:id/files',
     auth,
-    express.raw({ type: 'application/octet-stream', limit: '8mb' }),
+    express.raw({ type: 'application/octet-stream', limit: FREE_LIMITS.uploadBytes }),
     (req, res, next) => {
       try {
         channelAccess(req.params.id, req.user.id);
@@ -652,8 +683,16 @@ export function createApp({
           'SELECT COALESCE(sum(size),0) AS n FROM files WHERE user_id=?',
           req.user.id,
         ).n;
-        if (used + req.body.length > 100 * 1024 * 1024)
-          fail(413, 'Limite de 100 MiB de arquivos por conta atingido.');
+        if (used + req.body.length > FREE_LIMITS.uploadBytesPerUser)
+          fail(
+            413,
+            'Limite gratuito de 16 MiB de arquivos por conta atingido. Exclua arquivos próprios para liberar espaço.',
+          );
+        if (
+          get('SELECT COALESCE(sum(size),0) AS n FROM files').n + req.body.length >
+          FREE_LIMITS.uploadBytesTotal
+        )
+          fail(413, 'Limite gratuito de 64 MiB de anexos da instalação atingido.');
         let name;
         try {
           name = decodeURIComponent(req.headers['x-file-name'] || 'arquivo');
@@ -694,6 +733,20 @@ export function createApp({
     const f =
       get('SELECT * FROM files WHERE id=?', req.params.id) || fail(404, 'Arquivo inexistente.');
     channelAccess(f.channel_id, req.user.id);
+    const period = currentPeriod();
+    run("INSERT OR IGNORE INTO usage_counters VALUES('file-download-bytes',?,0)", period);
+    const reserved = run(
+      "UPDATE usage_counters SET value=value+? WHERE metric='file-download-bytes' AND period=? AND value+?<=?",
+      f.size,
+      period,
+      f.size,
+      FREE_LIMITS.downloadBytesPerMonth,
+    );
+    if (!reserved.changes)
+      fail(
+        429,
+        'Cota mensal de downloads de anexos atingida. Ela reinicia no próximo mês UTC; nenhum plano será alterado pelo app.',
+      );
     res.setHeader('Content-Type', f.mime);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private,no-store');
@@ -706,6 +759,34 @@ export function createApp({
         encodeURIComponent(f.name),
     );
     res.send(Buffer.from(f.content));
+  });
+  route('get', '/usage', (req) => ({
+    costPolicy: COST_POLICY,
+    limits: FREE_LIMITS,
+    period: currentPeriod(),
+    storage: {
+      userBytes: get('SELECT COALESCE(sum(size),0) AS n FROM files WHERE user_id=?', req.user.id).n,
+      totalBytes: get('SELECT COALESCE(sum(size),0) AS n FROM files').n,
+    },
+    downloadBytes:
+      get(
+        "SELECT value FROM usage_counters WHERE metric='file-download-bytes' AND period=?",
+        currentPeriod(),
+      )?.value || 0,
+    files: all(
+      'SELECT id,name,size,created FROM files WHERE user_id=? ORDER BY created DESC',
+      req.user.id,
+    ),
+  }));
+  route('delete', '/files/:id', (req) => {
+    const f =
+      get('SELECT * FROM files WHERE id=?', req.params.id) || fail(404, 'Arquivo inexistente.');
+    // The uploader can reclaim their quota even after leaving or being banned from a space.
+    if (f.user_id !== req.user.id) {
+      const c = channelAccess(f.channel_id, req.user.id);
+      admin(c.space_id, req.user.id);
+    }
+    run('DELETE FROM files WHERE id=?', f.id);
   });
   route('post', '/friends', (req) => {
     const { username } = z.object({ username: text(24) }).parse(req.body);
@@ -839,7 +920,20 @@ export function createApp({
       process.env.LIVEKIT_API_KEY,
       process.env.LIVEKIT_API_SECRET,
     );
-    await service.createRoom({ name: c.id, maxParticipants: 8, emptyTimeout: 300 });
+    try {
+      await service.createRoom({
+        name: c.id,
+        maxParticipants: FREE_LIMITS.participantsPerCall,
+        emptyTimeout: 300,
+      });
+    } catch (e) {
+      if (e.code === 'resource_exhausted' || /quota|limit.*exceed/i.test(e.message))
+        fail(
+          429,
+          'A franquia ou capacidade do serviço gratuito de mídia foi atingida. Verifique o painel Build; não há upgrade automático pelo Papotato.',
+        );
+      fail(503, 'Não foi possível alcançar o serviço de mídia. Nenhuma chamada foi simulada.');
+    }
     const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
       identity: req.user.id,
       name: req.user.display,
@@ -852,21 +946,23 @@ export function createApp({
       canSubscribe: true,
       canPublishData: false,
     });
-    return { token: await token.toJwt(), url: process.env.LIVEKIT_URL };
+    return { token: await token.toJwt(), url: process.env.LIVEKIT_URL, limits: FREE_LIMITS };
   });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Operação não encontrada.' }));
   app.use((err, req, res, next) => {
     if (!req.path.startsWith('/api')) return next(err);
-    const status = err instanceof z.ZodError ? 400 : err.status || 500;
+    const full = err.errcode === 13 || /database or disk is full/i.test(err.message);
+    const status = full ? 507 : err instanceof z.ZodError ? 400 : err.status || 500;
     if (status === 500) console.error('request_failed', req.method, req.path, err.name);
     res.status(status).json({
-      error:
-        status === 500
+      error: full
+        ? 'O armazenamento gratuito da instalação atingiu o limite. Faça backup e libere anexos; os dados existentes foram preservados.'
+        : status === 500
           ? 'Não foi possível concluir. Verifique o servidor.'
           : err instanceof z.ZodError
             ? 'Verifique os campos informados.'
-            : status === 413
-              ? 'O limite por arquivo é 8 MiB.'
+            : err.type === 'entity.too.large'
+              ? 'O limite por arquivo é 2 MiB.'
               : err.message,
     });
   });
